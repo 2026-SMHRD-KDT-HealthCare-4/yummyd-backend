@@ -1,0 +1,18 @@
+const express = require('express');
+const router = express.Router();
+
+const reflectionRoutes = require('./reflectionRoutes');
+const chatRoutes = require('./chatRoutes');
+const adminRoutes = require('./adminRoutes');
+const authRoutes = require('./authRoutes');
+const groupRoutes = require('./groupRoutes');
+const collectionRoutes = require('./collectionRoutes');
+
+router.use('/auth', authRoutes);
+router.use('/groups', groupRoutes);
+router.use('/collection', collectionRoutes);
+router.use('/', reflectionRoutes);
+router.use('/', chatRoutes);
+router.use('/admin', adminRoutes);
+
+module.exports = router;
