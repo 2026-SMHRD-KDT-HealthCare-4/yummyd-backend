@@ -14,44 +14,46 @@ const sequelize = new Sequelize(
   }
 );
 
+const Institution = require('./Institution')(sequelize);
+const Class = require('./Class')(sequelize);
 const User = require('./User')(sequelize);
-const Group = require('./Group')(sequelize);
 const Reflection = require('./Reflection')(sequelize);
-const EmotionLog = require('./EmotionLog')(sequelize);
 const RiskMetric = require('./RiskMetric')(sequelize);
 const Intervention = require('./Intervention')(sequelize);
 const Collection = require('./Collection')(sequelize);
 
-// 관계 설정
-User.hasMany(Reflection);
-Reflection.belongsTo(User);
+// --- 관계 설정 ---
 
-User.hasMany(Collection);
-Collection.belongsTo(User);
+// 1. Institution - Class (1:N)
+Institution.hasMany(Class, { foreignKey: 'institution_id', as: 'classes' });
+Class.belongsTo(Institution, { foreignKey: 'institution_id', as: 'institution' });
 
-Reflection.hasOne(EmotionLog);
-EmotionLog.belongsTo(Reflection);
+// 2. Class - User (1:N)
+Class.hasMany(User, { foreignKey: 'class_id', as: 'students' });
+User.belongsTo(Class, { foreignKey: 'class_id', as: 'class' });
 
+// 3. User - Reflection (1:N)
+User.hasMany(Reflection, { foreignKey: 'user_id', as: 'reflections' });
+Reflection.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
-User.hasMany(RiskMetric);
-RiskMetric.belongsTo(User);
+// 4. User - Collection (1:N)
+User.hasMany(Collection, { foreignKey: 'user_id', as: 'collections' });
+Collection.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
-User.hasMany(Intervention);
-Intervention.belongsTo(User);
+// 5. User - RiskMetric (1:N)
+User.hasMany(RiskMetric, { foreignKey: 'user_id', as: 'RiskMetrics' });
+RiskMetric.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
 
-// 기관-그룹-수강생 관계 추가
-User.hasMany(Group, { as: 'ManagedGroups', foreignKey: 'institution_id' });
-Group.belongsTo(User, { as: 'Institution', foreignKey: 'institution_id' });
-
-Group.hasMany(User, { as: 'Students', foreignKey: 'group_id' });
-User.belongsTo(Group, { as: 'StudentGroup', foreignKey: 'group_id' });
+// 6. User - Intervention (1:N)
+User.hasMany(Intervention, { foreignKey: 'user_id' });
+Intervention.belongsTo(User, { foreignKey: 'user_id' });
 
 module.exports = {
   sequelize,
+  Institution,
+  Class,
   User,
-  Group,
   Reflection,
-  EmotionLog,
   RiskMetric,
   Intervention,
   Collection

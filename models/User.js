@@ -4,46 +4,41 @@ module.exports = (sequelize) => {
   return sequelize.define('User', {
     login_id: { type: DataTypes.STRING, allowNull: false, unique: true },
     password: { type: DataTypes.STRING, allowNull: false },
-    username: { type: DataTypes.STRING, allowNull: false },
+    username: { type: DataTypes.STRING, allowNull: false }, // 제안서의 NAME
     email: { type: DataTypes.STRING, allowNull: false, unique: true },
     role: { 
-      type: DataTypes.ENUM('student', 'institution', 'instructor'), 
+      type: DataTypes.ENUM('student', 'admin', 'instructor'), 
       defaultValue: 'student' 
     },
-    status: { 
+    enroll_status: { // 제안서의 ENROLL_STATUS
       type: DataTypes.ENUM('active', 'dropout', 'graduated'), 
       defaultValue: 'active' 
     },
-    organization_name: { type: DataTypes.STRING },
-    institution_id: { type: DataTypes.INTEGER }, // 소속 기관 ID
-    group_id: { type: DataTypes.INTEGER },       // 소속 그룹 ID
-    cohort_id: { type: DataTypes.INTEGER },
-    admission_score: { type: DataTypes.DECIMAL(5, 2) },
+    institution_id: { type: DataTypes.INTEGER },
+    class_id: { type: DataTypes.INTEGER }, // 기존 group_id 대체
     
-    // 법적 동의 관련 필드
-    privacy_consent: { type: DataTypes.BOOLEAN, defaultValue: false },
-    third_party_consent: { type: DataTypes.BOOLEAN, defaultValue: false },
-    
-    // 유리병 및 배지 시스템 필드 추가
-    current_candy_count: { 
+    // 보상 시스템 (Yummy)
+    current_candy_count: { // CANDY_NOW
       type: DataTypes.INTEGER, 
       defaultValue: 0, 
       validate: { min: 0, max: 15 } 
     },
-    total_candy_count: { 
+    total_candy_count: { // CANDY_TOTAL
       type: DataTypes.INTEGER, 
       defaultValue: 0 
     },
-    attendance_days: { 
-      type: DataTypes.INTEGER, 
-      defaultValue: 0 
-    },
-    streak: { 
-      type: DataTypes.INTEGER, 
-      defaultValue: 0 
-    },
-    last_attendance_date: { 
-      type: DataTypes.DATEONLY 
-    }
+    
+    // 학습 태도 및 이탈 예측 지표
+    last_login_at: { type: DataTypes.DATE },
+    attendance_days: { type: DataTypes.INTEGER, defaultValue: 0 },
+    streak: { type: DataTypes.INTEGER, defaultValue: 0 },
+    
+    // 법적 동의
+    privacy_consent: { type: DataTypes.BOOLEAN, defaultValue: false },
+    third_party_consent: { type: DataTypes.BOOLEAN, defaultValue: false }
+  }, {
+    timestamps: true,
+    underscored: true,
+    tableName: 'Users'
   });
 };

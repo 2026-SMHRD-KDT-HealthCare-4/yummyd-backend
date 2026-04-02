@@ -1,19 +1,19 @@
 const axios = require('axios');
-const { sequelize, Reflection, EmotionLog, RiskMetric, User } = require('../models');
+const { sequelize, Reflection, RiskMetric, User } = require('../models');
 const { Op } = require('sequelize');
 
 const AI_SERVER_URL = process.env.AI_SERVER_URL;
 
 exports.createReflection = async (req, res) => {
-  const { userId, text, delayMinutes, image } = req.body;
+  const { userId, text, delayMinutes, image, isPrivate } = req.body;
   const io = req.app.get('socketio');
 
   try {
     const reflection = await Reflection.create({
-      UserId: userId,
-      original_text: text,
+      user_id: userId,
+      origin_text: text,
       image_data: image,
-      delay_minutes: delayMinutes || 0,
+      is_private: isPrivate || false,
       analysis_status: 'pending'
     });
 
@@ -41,8 +41,8 @@ async function processAnalysis(reflection, userId, text, delayMinutes, io) {
     if (io) io.to(`user_${userId}`).emit('analysis_started', { reflectionId: reflection.id });
 
     const lastRisk = await RiskMetric.findOne({
-      where: { UserId: userId },
-      order: [['createdAt', 'DESC']]
+      where: { user_id: userId },
+      order: [['created_at', 'DESC']]
     });
     const prevCer = lastRisk ? parseFloat(lastRisk.cumulative_cer) : 0.0;
 
@@ -52,40 +52,40 @@ async function processAnalysis(reflection, userId, text, delayMinutes, io) {
       content: text,
       delay_minutes: delayMinutes || 0,
       prev_cer: prevCer
-    }, { timeout: 30000 }); // 30초로 연장
+    }, { timeout: 30000 });
 
     if (!aiResponse.data || aiResponse.data.status !== 'success') {
       throw new Error('AI 서버 응답 형식이 올바르지 않습니다.');
     }
 
-    const { summary, emotions, risk_scores } = aiResponse.data;
+    const { summary, emotions, risk_scores, keywords } = aiResponse.data;
 
     await sequelize.transaction(async (t) => {
-      // ... (기존 트랜잭션 로직 유지)
+      // 1. Reflection 업데이트 (감정 정보 통합)
       await reflection.update({
         gpt_summary: summary,
-        analysis_status: 'completed'
-      }, { transaction: t });
-
-      await EmotionLog.create({
-        ReflectionId: reflection.id,
+        rep_emotion: emotions.dominant,
         happy_prob: emotions.happy || 0,
         sad_prob: emotions.sad || 0,
         angry_prob: emotions.angry || 0,
         heartache_prob: emotions.heartache || 0,
         anxious_prob: emotions.anxious || 0,
         embarrassed_prob: emotions.embarrassed || 0,
-        dominant_emotion: emotions.dominant
+        daily_risk: risk_scores.ers || 0,
+        keywords: keywords || [],
+        analysis_status: 'completed'
       }, { transaction: t });
 
+      // 2. RiskMetric 기록
       await RiskMetric.create({
-        UserId: userId,
+        user_id: userId,
         daily_ers: risk_scores.ers || 0,
         cumulative_cer: risk_scores.cer || 0,
         dropout_prob: risk_scores.dropout_prob || 0,
         is_alert: parseFloat(risk_scores.cer) > 1.5
       }, { transaction: t });
 
+      // 3. User 상태 업데이트 (출석/사탕/로그인)
       const user = await User.findByPk(userId, { transaction: t });
       if (user) {
         const now = new Date();
@@ -94,28 +94,27 @@ async function processAnalysis(reflection, userId, text, delayMinutes, io) {
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-        const updateData = {};
+        const updateData = {
+          last_login_at: now
+        };
 
-        // 📅 출석 및 🍬 캔디 지급은 오늘 "첫 작성"인 경우에만 갱신
+        // 출석 및 사탕 지급 (1일 1회)
+        // 기존 필드명을 새 모델 정의(underscored)에 맞게 쓰거나 Sequelize가 맵핑함
+        // 여기서는 직접 필드명을 사용
         if (user.last_attendance_date !== todayStr) {
           updateData.last_attendance_date = todayStr;
           updateData.attendance_days = (user.attendance_days || 0) + 1;
-          
-          // 🍬 사탕 지급 (1일 1회)
           updateData.current_candy_count = (user.current_candy_count || 0) + 1;
           updateData.total_candy_count = (user.total_candy_count || 0) + 1;
 
-          // 연속 출석(Streak) 계산
           if (user.last_attendance_date === yesterdayStr) {
             updateData.streak = (user.streak || 0) + 1;
           } else {
-            updateData.streak = 1; // 어제 출석 안했으면 1로 리셋
+            updateData.streak = 1;
           }
         }
         
-        if (Object.keys(updateData).length > 0) {
-          await user.update(updateData, { transaction: t });
-        }
+        await user.update(updateData, { transaction: t });
       }
     });
 
@@ -129,8 +128,7 @@ async function processAnalysis(reflection, userId, text, delayMinutes, io) {
 
   } catch (error) {
     let errorMsg = 'AI 분석 중 오류가 발생했습니다.';
-    if (error.code === 'ECONNREFUSED') errorMsg = 'AI 분석 서버에 연결할 수 없습니다. (서버가 꺼져있을 수 있습니다)';
-    if (error.code === 'ETIMEDOUT') errorMsg = 'AI 분석 시간이 너무 오래 걸려 중단되었습니다.';
+    if (error.code === 'ECONNREFUSED') errorMsg = 'AI 분석 서버에 연결할 수 없습니다.';
     
     console.error(`[Analysis Failure] ID ${reflection.id}:`, error.message);
     await reflection.update({ analysis_status: 'failed' }).catch(e => console.error(e));
@@ -155,9 +153,8 @@ exports.resetJar = async (req, res) => {
 exports.getHistory = async (req, res) => {
   try {
     const reflections = await Reflection.findAll({
-      where: { UserId: req.params.userId },
-      include: [EmotionLog],
-      order: [['createdAt', 'DESC']]
+      where: { user_id: req.params.userId },
+      order: [['created_at', 'DESC']]
     });
     res.json({ success: true, data: reflections });
   } catch (error) {
@@ -168,9 +165,9 @@ exports.getHistory = async (req, res) => {
 exports.getBoard = async (req, res) => {
   try {
     const posts = await Reflection.findAll({
+      where: { is_private: false },
       limit: 30,
-      include: [EmotionLog],
-      order: [['createdAt', 'DESC']]
+      order: [['created_at', 'DESC']]
     });
     res.json({ success: true, data: posts });
   } catch (error) {
