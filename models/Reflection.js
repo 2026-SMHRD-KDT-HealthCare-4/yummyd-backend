@@ -19,6 +19,21 @@ module.exports = (sequelize) => {
     embarrassed_prob: { type: DataTypes.DECIMAL(5, 4) },
     
     image_data: { type: DataTypes.TEXT('long') },
+
+    // 감정 리플렉션 섹션
+    emotion_emoji: { type: DataTypes.STRING },       // 'happy'|'normal'|'sad'|'tired'|'angry'
+    selected_spell: { type: DataTypes.STRING },      // 선택한 주문 텍스트
+    emotion_one_line: { type: DataTypes.TEXT },      // 감정 한 줄 입력 (max 150)
+
+    // 학습 내용 섹션
+    today_goal: { type: DataTypes.TEXT },            // 오늘 정복하고 싶었던 것
+    achievement: { type: DataTypes.STRING },         // 'clear'|'half'|'little'|'retry'
+    learned: { type: DataTypes.TEXT },               // 오늘 새로 안 것
+    confused: { type: DataTypes.TEXT },              // 아직 모르는 것
+    review: { type: DataTypes.TEXT },                // 내일 꼭 복습할 것
+    free_text: { type: DataTypes.TEXT('long') },     // 추가 자유 입력 (max 2000)
+    study_image: { type: DataTypes.TEXT('long') },   // 학습 자료 이미지
+
     is_private: { type: DataTypes.BOOLEAN, defaultValue: false },
     analysis_status: { 
       type: DataTypes.ENUM('pending', 'analyzing', 'completed', 'failed'), 

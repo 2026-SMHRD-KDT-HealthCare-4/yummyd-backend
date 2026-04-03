@@ -5,25 +5,50 @@ const { Op } = require('sequelize');
 const AI_SERVER_URL = process.env.AI_SERVER_URL;
 
 exports.createReflection = async (req, res) => {
-  const { userId, text, delayMinutes, image, isPrivate } = req.body;
+  const {
+    userId, text, delayMinutes, image, isPrivate,
+    emotionEmoji, selectedSpell, emotionOneLine,
+    todayGoal, achievement, learned, confused, review, freeText, studyImage
+  } = req.body;
   const io = req.app.get('socketio');
+
+  // AI 분석용 텍스트: 감정 한 줄 + 학습내용 조합
+  const analysisText = [
+    text,
+    emotionOneLine,
+    todayGoal,
+    learned,
+    confused,
+    review,
+    freeText
+  ].filter(Boolean).join('\n');
 
   try {
     const reflection = await Reflection.create({
       user_id: userId,
-      origin_text: text,
+      origin_text: analysisText,
       image_data: image,
       is_private: isPrivate || false,
-      analysis_status: 'pending'
+      analysis_status: 'pending',
+      emotion_emoji: emotionEmoji || null,
+      selected_spell: selectedSpell || null,
+      emotion_one_line: emotionOneLine || null,
+      today_goal: todayGoal || null,
+      achievement: achievement || null,
+      learned: learned || null,
+      confused: confused || null,
+      review: review || null,
+      free_text: freeText || null,
+      study_image: studyImage || null
     });
 
-    res.status(201).json({ 
-      success: true, 
+    res.status(201).json({
+      success: true,
       message: "회고가 등록되었습니다. AI 분석이 곧 시작됩니다.",
-      data: { id: reflection.id, status: 'pending' } 
+      data: { id: reflection.id, status: 'pending' }
     });
 
-    processAnalysis(reflection, userId, text, delayMinutes, io).catch(err => {
+    processAnalysis(reflection, userId, analysisText, delayMinutes, io).catch(err => {
       console.error(`[Background Analysis Error] Reflection ID ${reflection.id}:`, err);
     });
 

@@ -42,7 +42,7 @@ const startServer = async () => {
     console.log('✅ Database connected successfully.');
 
     // sync() 사용하여 테이블 생성/유지
-    await sequelize.sync(); 
+    await sequelize.sync();
     console.log('✅ Database models synchronized.');
 
     const adminPassword = await bcrypt.hash('admin1234', 10);
