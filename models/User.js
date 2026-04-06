@@ -10,12 +10,12 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM('student', 'admin', 'instructor'), 
       defaultValue: 'student' 
     },
-    enroll_status: { // 제안서의 ENROLL_STATUS
+    status: { // 제안서의 ENROLL_STATUS
       type: DataTypes.ENUM('active', 'dropout', 'graduated'), 
       defaultValue: 'active' 
     },
     institution_id: { type: DataTypes.INTEGER },
-    class_id: { type: DataTypes.INTEGER }, // 기존 group_id 대체
+    group_id: { type: DataTypes.INTEGER }, // 기존 group_id 대체
     
     // 보상 시스템 (Yummy)
     current_candy_count: { // CANDY_NOW
