@@ -42,8 +42,10 @@ module.exports = (sequelize) => {
       type: DataTypes.INTEGER, 
       defaultValue: 0 
     },
-    last_attendance_date: { 
-      type: DataTypes.DATEONLY 
+    last_attendance_date: {
+      type: DataTypes.DATEONLY
     }
+  }, {
+    timestamps: false
   });
 };

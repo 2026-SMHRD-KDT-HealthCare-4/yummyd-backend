@@ -5,16 +5,31 @@ const { Op } = require('sequelize');
 const AI_SERVER_URL = process.env.AI_SERVER_URL;
 
 exports.createReflection = async (req, res) => {
-  const { userId, text, delayMinutes, image } = req.body;
+  const {
+    userId, text, delayMinutes, image,
+    emotionEmoji, selectedSpell,
+    todayGoal, achievement, learned, confused, review, freeText, studyImage
+  } = req.body;
   const io = req.app.get('socketio');
 
   try {
     const reflection = await Reflection.create({
       UserId: userId,
-      original_text: text,
-      image_data: image,
+      original_text: text || null,
+      image_data: image || null,
       delay_minutes: delayMinutes || 0,
-      analysis_status: 'pending'
+      analysis_status: 'pending',
+
+      emotion_emoji:  emotionEmoji  || null,
+      selected_spell: selectedSpell || null,
+
+      today_goal:  todayGoal  || null,
+      achievement: achievement || null,
+      learned:     learned    || null,
+      confused:    confused   || null,
+      review:      review     || null,
+      free_text:   freeText   || null,
+      study_image: studyImage || null,
     });
 
     res.status(201).json({ 
