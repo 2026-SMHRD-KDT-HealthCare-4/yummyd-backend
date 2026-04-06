@@ -14,5 +14,9 @@ module.exports = (sequelize) => {
       type: DataTypes.BOOLEAN, 
       defaultValue: false 
     }
+  }, {
+    timestamps: true,
+    underscored: true,
+    tableName: 'Collections'
   });
 };

@@ -14,10 +14,10 @@ const sequelize = new Sequelize(
   }
 );
 
+const Institution = require('./Institution')(sequelize);
+const Class = require('./Class')(sequelize);
 const User = require('./User')(sequelize);
-const Group = require('./Group')(sequelize);
 const Reflection = require('./Reflection')(sequelize);
-const EmotionLog = require('./EmotionLog')(sequelize);
 const RiskMetric = require('./RiskMetric')(sequelize);
 const Intervention = require('./Intervention')(sequelize);
 const Collection = require('./Collection')(sequelize);
@@ -49,10 +49,10 @@ User.belongsTo(Group, { as: 'StudentGroup', foreignKey: 'group_id', ...noFK });
 
 module.exports = {
   sequelize,
+  Institution,
+  Class,
   User,
-  Group,
   Reflection,
-  EmotionLog,
   RiskMetric,
   Intervention,
   Collection
