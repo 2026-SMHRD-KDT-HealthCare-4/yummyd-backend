@@ -46,6 +46,15 @@ Class.belongsTo(User, { as: 'Institution', foreignKey: 'institution_id', ...noFK
 
 Class.hasMany(User, { as: 'Students', foreignKey: 'group_id', ...noFK });
 User.belongsTo(Class, { as: 'StudentGroup', foreignKey: 'group_id', ...noFK });
+<<<<<<< HEAD
+=======
+
+// User.hasMany(Group, { as: 'ManagedGroups', foreignKey: 'institution_id', ...noFK });
+// Group.belongsTo(User, { as: 'Institution', foreignKey: 'institution_id', ...noFK });
+
+// Group.hasMany(User, { as: 'Students', foreignKey: 'group_id', ...noFK });
+// User.belongsTo(Group, { as: 'StudentGroup', foreignKey: 'group_id', ...noFK });
+>>>>>>> 066a2686806bd733385168029b782c7d37d661cf
 
 module.exports = {
   sequelize,
