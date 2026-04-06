@@ -15,7 +15,6 @@ exports.createReflection = async (req, res) => {
   // AI 분석용 텍스트: 감정 한 줄 + 학습내용 조합
   const analysisText = [
     text,
-    emotionOneLine,
     todayGoal,
     learned,
     confused,
