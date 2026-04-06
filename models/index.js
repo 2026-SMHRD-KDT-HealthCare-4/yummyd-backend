@@ -31,8 +31,8 @@ Reflection.belongsTo(User, noFK);
 User.hasMany(Collection, noFK);
 Collection.belongsTo(User, noFK);
 
-Reflection.hasOne(EmotionLog, noFK);
-EmotionLog.belongsTo(Reflection, noFK);
+// Reflection.hasOne(EmotionLog, noFK);
+// EmotionLog.belongsTo(Reflection, noFK);
 
 User.hasMany(RiskMetric, noFK);
 RiskMetric.belongsTo(User, noFK);
@@ -41,11 +41,11 @@ User.hasMany(Intervention, noFK);
 Intervention.belongsTo(User, noFK);
 
 // 기관-그룹-수강생 관계 추가
-User.hasMany(Group, { as: 'ManagedGroups', foreignKey: 'institution_id', ...noFK });
-Group.belongsTo(User, { as: 'Institution', foreignKey: 'institution_id', ...noFK });
+User.hasMany(Class, { as: 'ManagedGroups', foreignKey: 'institution_id', ...noFK });
+Class.belongsTo(User, { as: 'Institution', foreignKey: 'institution_id', ...noFK });
 
-Group.hasMany(User, { as: 'Students', foreignKey: 'group_id', ...noFK });
-User.belongsTo(Group, { as: 'StudentGroup', foreignKey: 'group_id', ...noFK });
+Class.hasMany(User, { as: 'Students', foreignKey: 'group_id', ...noFK });
+User.belongsTo(Class, { as: 'StudentGroup', foreignKey: 'group_id', ...noFK });
 
 module.exports = {
   sequelize,
