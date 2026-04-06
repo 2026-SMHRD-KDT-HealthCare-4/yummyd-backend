@@ -22,31 +22,30 @@ const RiskMetric = require('./RiskMetric')(sequelize);
 const Intervention = require('./Intervention')(sequelize);
 const Collection = require('./Collection')(sequelize);
 
-// --- 관계 설정 ---
+// 관계 설정 (constraints: false → 공유 DB FK 타입 충돌 방지)
+const noFK = { constraints: false };
 
-// 1. Institution - Class (1:N)
-Institution.hasMany(Class, { foreignKey: 'institution_id', as: 'classes' });
-Class.belongsTo(Institution, { foreignKey: 'institution_id', as: 'institution' });
+User.hasMany(Reflection, noFK);
+Reflection.belongsTo(User, noFK);
 
-// 2. Class - User (1:N)
-Class.hasMany(User, { foreignKey: 'class_id', as: 'students' });
-User.belongsTo(Class, { foreignKey: 'class_id', as: 'class' });
+User.hasMany(Collection, noFK);
+Collection.belongsTo(User, noFK);
 
-// 3. User - Reflection (1:N)
-User.hasMany(Reflection, { foreignKey: 'user_id', as: 'reflections' });
-Reflection.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+Reflection.hasOne(EmotionLog, noFK);
+EmotionLog.belongsTo(Reflection, noFK);
 
-// 4. User - Collection (1:N)
-User.hasMany(Collection, { foreignKey: 'user_id', as: 'collections' });
-Collection.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasMany(RiskMetric, noFK);
+RiskMetric.belongsTo(User, noFK);
 
-// 5. User - RiskMetric (1:N)
-User.hasMany(RiskMetric, { foreignKey: 'user_id', as: 'RiskMetrics' });
-RiskMetric.belongsTo(User, { foreignKey: 'user_id', as: 'user' });
+User.hasMany(Intervention, noFK);
+Intervention.belongsTo(User, noFK);
 
-// 6. User - Intervention (1:N)
-User.hasMany(Intervention, { foreignKey: 'user_id' });
-Intervention.belongsTo(User, { foreignKey: 'user_id' });
+// 기관-그룹-수강생 관계 추가
+User.hasMany(Group, { as: 'ManagedGroups', foreignKey: 'institution_id', ...noFK });
+Group.belongsTo(User, { as: 'Institution', foreignKey: 'institution_id', ...noFK });
+
+Group.hasMany(User, { as: 'Students', foreignKey: 'group_id', ...noFK });
+User.belongsTo(Group, { as: 'StudentGroup', foreignKey: 'group_id', ...noFK });
 
 module.exports = {
   sequelize,

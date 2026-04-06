@@ -27,18 +27,14 @@ module.exports = (sequelize) => {
       type: DataTypes.INTEGER, 
       defaultValue: 0 
     },
-    
-    // 학습 태도 및 이탈 예측 지표
-    last_login_at: { type: DataTypes.DATE },
-    attendance_days: { type: DataTypes.INTEGER, defaultValue: 0 },
-    streak: { type: DataTypes.INTEGER, defaultValue: 0 },
-    
-    // 법적 동의
-    privacy_consent: { type: DataTypes.BOOLEAN, defaultValue: false },
-    third_party_consent: { type: DataTypes.BOOLEAN, defaultValue: false }
+    streak: { 
+      type: DataTypes.INTEGER, 
+      defaultValue: 0 
+    },
+    last_attendance_date: {
+      type: DataTypes.DATEONLY
+    }
   }, {
-    timestamps: true,
-    underscored: true,
-    tableName: 'Users'
+    timestamps: false
   });
 };
