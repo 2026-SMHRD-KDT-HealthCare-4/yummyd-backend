@@ -1,5 +1,4 @@
 const axios = require('axios');
-const { Op } = require('sequelize');
 const { sequelize, Reflection, Analyses, User } = require('../models');
 
 const AI_SERVER_URL = process.env.AI_SERVER_URL;
