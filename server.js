@@ -42,9 +42,8 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('✅ Database connected successfully.');
 
-    // sync() 사용하여 테이블 생성/유지 (constraints: false → 공유 DB FK 타입 충돌 방지)
-    await sequelize.sync({ constraints: false });
-    console.log('✅ Database models synchronized.');
+    // sync() 제거 — 공유 DB에서 팀원 서버 시작 시 테이블 자동 재생성 방지
+    // DB 구조 변경 필요 시 직접 SQL로 수동 실행할 것
 
     const adminPassword = await bcrypt.hash('admin1234', 10);
 
