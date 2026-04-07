@@ -1,28 +1,24 @@
-const { DataTypes, Sequelize } = require('sequelize');
+const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
   return sequelize.define('Reflection', {
-    original_text: { type: DataTypes.TEXT, allowNull: true },
-    gpt_summary: { type: DataTypes.TEXT },
-    image_data: { type: DataTypes.TEXT('long') },
-    delay_minutes: { type: DataTypes.INTEGER, defaultValue: 0 },
-    analysis_status: {
-      type: DataTypes.ENUM('pending', 'analyzing', 'completed', 'failed'),
-      defaultValue: 'pending'
-    },
-    submitted_at: { type: DataTypes.DATE, defaultValue: Sequelize.NOW },
+    // 공통
+    EDU_delay_minutes: { type: DataTypes.INTEGER, defaultValue: 0 },
 
     // 감정 리플렉션
-    emotion_emoji:  { type: DataTypes.STRING },
-    selected_spell: { type: DataTypes.STRING },
+    EMO_reflectionText: { type: DataTypes.TEXT },
+    EMO_image:          { type: DataTypes.TEXT('long') },
+    EMO_emoji:          { type: DataTypes.STRING },
+    EMO_spell:          { type: DataTypes.STRING },
 
     // 학습 기록
-    today_goal:  { type: DataTypes.STRING },
-    achievement: { type: DataTypes.STRING },
-    learned:     { type: DataTypes.TEXT },
-    confused:    { type: DataTypes.TEXT },
-    review:      { type: DataTypes.TEXT },
-    free_text:   { type: DataTypes.TEXT('long') },
-    study_image: { type: DataTypes.TEXT('long') },
+    EDU_goal:           { type: DataTypes.STRING },
+    EDU_achievement:    { type: DataTypes.STRING },
+    EDU_learned:        { type: DataTypes.TEXT },
+    EDU_confused:       { type: DataTypes.TEXT },
+    EDU_review:         { type: DataTypes.TEXT },
+    EDU_reflectionText: { type: DataTypes.TEXT('long') },
+    EDU_image:          { type: DataTypes.TEXT('long') },
+    EDU_char_count:     { type: DataTypes.INTEGER, defaultValue: 0 },
   });
 };

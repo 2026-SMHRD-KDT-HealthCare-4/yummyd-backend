@@ -77,7 +77,6 @@ const startServer = async () => {
         username: '테스트 학생',
         email: 'student@yummy.com',
         role: 'student',
-        institution_id: testInst.id,
         class_id: testClass.id,
         privacy_consent: true,
         third_party_consent: true
@@ -93,7 +92,6 @@ const startServer = async () => {
         username: '관리자',
         email: 'admin@yummy.com',
         role: 'instructor',
-        institution_id: testInst.id,
         privacy_consent: true,
         third_party_consent: true
       } 

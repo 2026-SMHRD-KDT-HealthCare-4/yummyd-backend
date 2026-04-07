@@ -14,8 +14,6 @@ module.exports = (sequelize) => {
       type: DataTypes.ENUM('active', 'dropout', 'graduated'),
       defaultValue: 'active'
     },
-    institution_id: { type: DataTypes.INTEGER },
-    group_id: { type: DataTypes.INTEGER },
     class_id: { type: DataTypes.INTEGER },
     
     // 보상 시스템 (Yummy)
