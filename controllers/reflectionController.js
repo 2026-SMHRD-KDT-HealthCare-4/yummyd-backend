@@ -1,5 +1,5 @@
 const axios = require('axios');
-const { sequelize, Reflection, RiskMetric, User } = require('../models');
+const { sequelize, Reflection, Analyses, User } = require('../models');
 
 const AI_SERVER_URL = process.env.AI_SERVER_URL;
 
@@ -28,6 +28,7 @@ exports.createReflection = async (req, res) => {
       EMO_image:          image      || null,
       EMO_emoji:          emotionEmoji  || null,
       EMO_spell:          selectedSpell || null,
+
 
       EDU_goal:           todayGoal   || null,
       EDU_achievement:    achievement || null,
@@ -60,33 +61,38 @@ async function processAnalysis(reflection, userId, text, delayMinutes, io) {
     console.log(`[Analysis Start] Connecting to ML Server at ${AI_SERVER_URL}...`);
     if (io) io.to(`user_${userId}`).emit('analysis_started', { reflectionId: reflection.id });
 
-    const lastRisk = await RiskMetric.findOne({
-      where: { user_id: userId },
-      order: [['created_at', 'DESC']]
-    });
-    const prevCer = lastRisk ? parseFloat(lastRisk.cumulative_cer) : 0.0;
-
     const aiResponse = await axios.post(`${AI_SERVER_URL}/api/ml/analyze`, {
       student_id: userId,
       content: text,
       delay_minutes: delayMinutes || 0,
-      prev_cer: prevCer
+      prev_cer: 0
     }, { timeout: 30000 });
 
     if (!aiResponse.data || aiResponse.data.status !== 'success') {
       throw new Error('AI 서버 응답 형식이 올바르지 않습니다.');
     }
 
-    const { emotions, risk_scores } = aiResponse.data;
+    const { emotions, risk_scores, summary } = aiResponse.data;
 
     await sequelize.transaction(async (t) => {
-      // RiskMetric 기록
-      await RiskMetric.create({
-        user_id: userId,
-        daily_ers: risk_scores.ers || 0,
-        cumulative_cer: risk_scores.cer || 0,
-        dropout_prob: risk_scores.dropout_prob || 0,
-        is_alert: parseFloat(risk_scores.cer) > 1.5
+      // Analyses 기록
+      await Analyses.create({
+        happy_prob:       emotions.happy       || 0,
+        fufill_prob:      emotions.fufill      || 0,
+        relief_prob:      emotions.relief      || 0,
+        gratitude_prob:   emotions.gratitude   || 0,
+        proud_prob:       emotions.proud       || 0,
+        sad_prob:         emotions.sad         || 0,
+        anxous_prob:      emotions.anxous      || 0,
+        defeat_prob:      emotions.defeat      || 0,
+        stress_prob:      emotions.stress      || 0,
+        embarrassed_prob: emotions.embarrassed || 0,
+        bored_prob:       emotions.bored       || 0,
+        exhausted_prob:   emotions.exhausted   || 0,
+        depressed_prob:   emotions.depressed   || 0,
+        gpt_EDU_summary:  summary              || null,
+        ers:              risk_scores.ers      || 0,
+        ReflectionId:     reflection.id,
       }, { transaction: t });
 
       // User 출석/사탕 업데이트

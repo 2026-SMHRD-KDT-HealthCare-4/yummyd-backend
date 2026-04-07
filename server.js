@@ -16,11 +16,11 @@ const io = new Server(server, {
 app.set('socketio', io);
 
 io.on('connection', (socket) => {
-  socket.on('join', ({ userId, cohortId }) => {
+  socket.on('join', ({ userId, classId }) => {
     socket.join(`user_${userId}`);
-    if (cohortId) {
-      socket.join(`cohort_${cohortId}`);
-      console.log(`📡 Socket: User ${userId} joined cohort_${cohortId} room.`);
+    if (classId) {
+      socket.join(`class_${classId}`);
+      console.log(`📡 Socket: User ${userId} joined class_${classId} room.`);
     }
   });
 });
