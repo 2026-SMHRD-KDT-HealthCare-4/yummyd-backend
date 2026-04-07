@@ -19,7 +19,6 @@ const Class = require('./Class')(sequelize);
 const User = require('./User')(sequelize);
 const Reflection = require('./Reflection')(sequelize);
 const RiskMetric = require('./RiskMetric')(sequelize);
-const Intervention = require('./Intervention')(sequelize);
 const Collection = require('./Collection')(sequelize);
 
 // 관계 설정 (constraints: false → 공유 DB FK 타입 충돌 방지)
@@ -37,21 +36,12 @@ Collection.belongsTo(User, noFK);
 User.hasMany(RiskMetric, noFK);
 RiskMetric.belongsTo(User, noFK);
 
-User.hasMany(Intervention, noFK);
-Intervention.belongsTo(User, noFK);
+// Institutions → Classes → Users 계층 관계
+Institution.hasMany(Class, { foreignKey: 'institution_id', ...noFK });
+Class.belongsTo(Institution, { foreignKey: 'institution_id', ...noFK });
 
-// 기관-그룹-수강생 관계 추가
-User.hasMany(Class, { as: 'ManagedGroups', foreignKey: 'institution_id', ...noFK });
-Class.belongsTo(User, { as: 'Institution', foreignKey: 'institution_id', ...noFK });
-
-Class.hasMany(User, { as: 'Students', foreignKey: 'group_id', ...noFK });
-User.belongsTo(Class, { as: 'StudentGroup', foreignKey: 'group_id', ...noFK });
-
-// User.hasMany(Group, { as: 'ManagedGroups', foreignKey: 'institution_id', ...noFK });
-// Group.belongsTo(User, { as: 'Institution', foreignKey: 'institution_id', ...noFK });
-
-// Group.hasMany(User, { as: 'Students', foreignKey: 'group_id', ...noFK });
-// User.belongsTo(Group, { as: 'StudentGroup', foreignKey: 'group_id', ...noFK });
+Class.hasMany(User, { as: 'Students', foreignKey: 'class_id', ...noFK });
+User.belongsTo(Class, { as: 'StudentClass', foreignKey: 'class_id', ...noFK });
 
 module.exports = {
   sequelize,
@@ -60,6 +50,5 @@ module.exports = {
   User,
   Reflection,
   RiskMetric,
-  Intervention,
   Collection
 };

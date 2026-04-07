@@ -1,23 +1,23 @@
-const { sequelize, User, Reflection, RiskMetric } = require('../models');
+const { sequelize, User, Reflection, RiskMetric, Class } = require('../models');
 const { Op } = require('sequelize');
 
 exports.getStats = async (req, res) => {
   try {
     const institution_id = req.user.id;
     const class_id = req.query.class_id || req.query.group_id;
-    
-    // 기본 필터: 내 기관의 학생
-    const whereClause = { role: 'student', institution_id };
-    
-    // 특정 클래스 선택 시 필터 추가
-    if (class_id && class_id !== 'all') {
-      whereClause.class_id = class_id;
-    }
 
-    const totalStudents = await User.count({ where: whereClause });
-    
+    // Classes를 통해 기관 소속 학생 조회
+    const classWhere = { institution_id };
+    if (class_id && class_id !== 'all') classWhere.id = class_id;
+
+    const totalStudents = await User.count({
+      where: { role: 'student' },
+      include: [{ model: Class, as: 'StudentClass', where: classWhere, required: true }]
+    });
+
     const students = await User.findAll({
-      where: whereClause,
+      where: { role: 'student' },
+      include: [{ model: Class, as: 'StudentClass', where: classWhere, required: true }],
       attributes: ['id']
     });
     const studentIds = students.map(s => s.id);
@@ -51,12 +51,12 @@ exports.getWeeklyRiskTrend = async (req, res) => {
     const institution_id = req.user.id;
     const class_id = req.query.class_id || req.query.group_id;
 
+    const classWhere = { institution_id };
+    if (class_id && class_id !== 'all') classWhere.id = class_id;
+
     const studentIds = (await User.findAll({
-      where: { 
-        role: 'student', 
-        institution_id,
-        ...(class_id && class_id !== 'all' ? { class_id } : {})
-      },
+      where: { role: 'student' },
+      include: [{ model: Class, as: 'StudentClass', where: classWhere, required: true }],
       attributes: ['id']
     })).map(s => s.id);
 
@@ -87,18 +87,20 @@ exports.getHighRiskStudents = async (req, res) => {
     const institution_id = req.user.id;
     const class_id = req.query.class_id || req.query.group_id;
 
+    const classWhere = { institution_id };
+    if (class_id && class_id !== 'all') classWhere.id = class_id;
+
     const students = await User.findAll({
-      where: { 
-        role: 'student', 
-        institution_id,
-        ...(class_id && class_id !== 'all' ? { class_id } : {})
-      },
-      include: [{
-        model: RiskMetric,
-        as: 'RiskMetrics',
-        limit: 1,
-        order: [['created_at', 'DESC']]
-      }],
+      where: { role: 'student' },
+      include: [
+        { model: Class, as: 'StudentClass', where: classWhere, required: true },
+        {
+          model: RiskMetric,
+          as: 'RiskMetrics',
+          limit: 1,
+          order: [['created_at', 'DESC']]
+        }
+      ],
       order: [[{ model: RiskMetric, as: 'RiskMetrics' }, 'cumulative_cer', 'DESC']]
     });
 

@@ -6,10 +6,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'yummy_secret_key_1234';
 
 // [POST] 회원가입
 exports.register = async (req, res) => {
-  const { 
-    login_id, password, username, email, role, 
-    inst_name, institution_id, class_id, 
-    privacy_consent, third_party_consent 
+  const {
+    login_id, password, username, email, role,
+    inst_name, class_id,
+    privacy_consent, third_party_consent
   } = req.body;
 
   try {
@@ -43,7 +43,6 @@ exports.register = async (req, res) => {
       username,
       email,
       role: role || 'student',
-      institution_id: (role === 'student' && institution_id) ? institution_id : null,
       class_id: (role === 'student' && class_id) ? class_id : null,
       privacy_consent,
       third_party_consent,
@@ -109,13 +108,12 @@ exports.login = async (req, res) => {
         id: account.id, 
         username: account.username, 
         role: account.role,
-        institution_id: account.institution_id,
         class_id: account.class_id,
         current_candy_count: account.current_candy_count || 0,
         total_candy_count: account.total_candy_count || 0,
         attendance_days: account.attendance_days || 0,
         streak: account.streak || 0
-      } 
+      }
     });
   } catch (error) {
     console.error('[Login Error Detail]', error);
@@ -147,13 +145,12 @@ exports.getMe = async (req, res) => {
         id: account.id,
         username: account.username,
         role: account.role,
-        institution_id: account.institution_id,
         class_id: account.class_id,
         current_candy_count: account.current_candy_count || 0,
         total_candy_count: account.total_candy_count || 0,
         attendance_days: account.attendance_days || 0,
         streak: account.streak || 0
-      } 
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
