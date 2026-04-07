@@ -46,8 +46,7 @@ exports.register = async (req, res) => {
       class_id: (role === 'student' && class_id) ? class_id : null,
       privacy_consent,
       third_party_consent,
-      current_candy_count: 0,
-      total_candy_count: 0
+      current_candy_count: 0
     });
 
     res.status(201).json({ success: true, message: '회원가입이 완료되었습니다.', userId: newUser.id });
@@ -110,7 +109,6 @@ exports.login = async (req, res) => {
         role: account.role,
         class_id: account.class_id,
         current_candy_count: account.current_candy_count || 0,
-        total_candy_count: account.total_candy_count || 0,
         attendance_days: account.attendance_days || 0,
         streak: account.streak || 0
       }
@@ -147,7 +145,6 @@ exports.getMe = async (req, res) => {
         role: account.role,
         class_id: account.class_id,
         current_candy_count: account.current_candy_count || 0,
-        total_candy_count: account.total_candy_count || 0,
         attendance_days: account.attendance_days || 0,
         streak: account.streak || 0
       }
