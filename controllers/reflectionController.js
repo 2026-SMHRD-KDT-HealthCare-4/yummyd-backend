@@ -38,7 +38,27 @@ exports.createReflection = async (req, res) => {
       EDU_char_count: eduCharCount,
     });
 
-    // 2. 클라이언트에 즉시 응답 (사용자 대기 시간 최소화)
+    // 캔디 지급: AI 분석과 무관하게 즉시 처리 (하루 최대 2개)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const user = await User.findByPk(userId);
+    console.log(`[Candy Debug] userId=${userId}, user=${!!user}, current=${user?.current_candy_count}, last_candy_date=${user?.last_candy_date}, daily_candy_count=${user?.daily_candy_count}, todayStr=${todayStr}`);
+    if (user && user.current_candy_count < 15) {
+      const dailyCount = user.last_candy_date === todayStr ? (user.daily_candy_count || 0) : 0;
+      console.log(`[Candy Debug] dailyCount=${dailyCount}`);
+      if (dailyCount < 2) {
+        await user.update({
+          current_candy_count: user.current_candy_count + 1,
+          daily_candy_count: dailyCount + 1,
+          last_candy_date: todayStr,
+        });
+        console.log(`[Candy] userId=${userId} 지급 완료 (오늘 ${dailyCount + 1}/2개)`);
+      } else {
+        console.log(`[Candy] userId=${userId} 오늘 최대 2개 도달 → 지급 안 함`);
+      }
+    } else {
+      console.log(`[Candy Debug] 조건 미충족 → user=${!!user}, current_candy_count=${user?.current_candy_count}`);
+    }
+
     res.status(201).json({
       success: true,
       message: '회고가 등록되었습니다. AI 분석이 백그라운드에서 진행됩니다.',
@@ -120,7 +140,8 @@ async function processAnalysis(reflection, userId, io) {
         gpt_EDU_summary: result.edu_summary
       }, { transaction: t });
 
-      // 2. User 출석 및 사탕 데이터 업데이트
+      // 출석/스트릭 업데이트 (하루 1회)
+      const user = await User.findByPk(userId, { transaction: t });
       if (user) {
         const now = new Date();
         const todayStr = now.toISOString().split('T')[0];
@@ -128,17 +149,13 @@ async function processAnalysis(reflection, userId, io) {
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-        const updateData = {};
         if (user.last_attendance_date !== todayStr) {
-          updateData.last_attendance_date = todayStr;
-          updateData.attendance_days = (user.attendance_days || 0) + 1;
-          updateData.current_candy_count = (user.current_candy_count || 0) + 1;
-          updateData.total_candy_count = (user.total_candy_count || 0) + 1;
-          updateData.streak = user.last_attendance_date === yesterdayStr
-            ? (user.streak || 0) + 1 : 1;
-        }
-        if (Object.keys(updateData).length > 0) {
-          await user.update(updateData, { transaction: t });
+          await user.update({
+            last_attendance_date: todayStr,
+            attendance_days: (user.attendance_days || 0) + 1,
+            streak: user.last_attendance_date === yesterdayStr
+              ? (user.streak || 0) + 1 : 1,
+          }, { transaction: t });
         }
       }
     });

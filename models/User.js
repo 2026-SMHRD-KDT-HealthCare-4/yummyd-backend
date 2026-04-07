@@ -22,15 +22,18 @@ module.exports = (sequelize) => {
       defaultValue: 0, 
       validate: { min: 0, max: 15 } 
     },
-    total_candy_count: { // CANDY_TOTAL
-      type: DataTypes.INTEGER, 
-      defaultValue: 0 
-    },
     streak: { 
       type: DataTypes.INTEGER, 
       defaultValue: 0 
     },
     last_attendance_date: {
+      type: DataTypes.DATEONLY
+    },
+    daily_candy_count: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    },
+    last_candy_date: {
       type: DataTypes.DATEONLY
     }
   }, {

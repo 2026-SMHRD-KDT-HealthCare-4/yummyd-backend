@@ -42,9 +42,21 @@ const startServer = async () => {
     await sequelize.authenticate();
     console.log('✅ Database connected successfully.');
 
-    // sync() 사용하여 테이블 생성/유지 (constraints: false → 공유 DB FK 타입 충돌 방지)
-    await sequelize.sync({ constraints: false });
-    console.log('✅ Database models synchronized.');
+    // sync() 제거 — 공유 DB에서 팀원 서버 시작 시 테이블 자동 재생성 방지
+    // DB 구조 변경 필요 시 직접 SQL로 수동 실행할 것
+
+    // daily_candy_count, last_candy_date 컬럼 없으면 추가 (MySQL 버전 호환)
+    const addColumnIfMissing = async (column, definition) => {
+      const [rows] = await sequelize.query(
+        `SHOW COLUMNS FROM \`Users\` LIKE '${column}'`
+      );
+      if (rows.length === 0) {
+        await sequelize.query(`ALTER TABLE \`Users\` ADD COLUMN \`${column}\` ${definition}`);
+        console.log(`✅ Users.${column} 컬럼 추가 완료`);
+      }
+    };
+    await addColumnIfMissing('daily_candy_count', 'INT DEFAULT 0');
+    await addColumnIfMissing('last_candy_date', 'DATE DEFAULT NULL');
 
     const adminPassword = await bcrypt.hash('admin1234', 10);
 
