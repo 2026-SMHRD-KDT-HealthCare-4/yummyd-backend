@@ -30,6 +30,9 @@ Reflection.belongsTo(User, noFK);
 Reflection.hasOne(Analyses, noFK);
 Analyses.belongsTo(Reflection, noFK);
 
+User.hasMany(Analyses, noFK);
+Analyses.belongsTo(User, noFK);
+
 User.hasMany(Collection, noFK);
 Collection.belongsTo(User, noFK);
 

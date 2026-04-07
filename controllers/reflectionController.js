@@ -20,6 +20,24 @@ exports.createReflection = async (req, res) => {
     .filter(Boolean).join('').length;
 
   try {
+    // 0. 누적 데이터 계산을 위한 유저 정보 조회
+    const userRecord = await User.findByPk(userId);
+    if (!userRecord) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    // 누적 출석 일수 (오늘 제출분 포함)
+    const cumulativeAttendance = (userRecord.attendance_days || 0) + 1;
+
+    // 가입 후 총 경과 일수 계산 (가입일이 없으면 현재 시각 기준)
+    const enrollmentDate = new Date(userRecord.created_at || userRecord.createdAt || new Date());
+    const today = new Date();
+    const diffTime = Math.max(0, today - enrollmentDate);
+    const totalDaysSinceEnrollment = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+
+    // 누적 결석 일수 (총 경과일 - 누적 출석일)
+    const cumulativeAbsence = Math.max(0, totalDaysSinceEnrollment - cumulativeAttendance);
+
     // 1. 원본 회고 데이터 저장 (Reflections 테이블)
     const reflection = await Reflection.create({
       UserId: userId,
@@ -36,11 +54,13 @@ exports.createReflection = async (req, res) => {
       EDU_image: studyImage || null,
       EDU_delay_minutes: delayMinutes || 0,
       EDU_char_count: eduCharCount,
+      cumulative_days: cumulativeAttendance,
+      cumulative_absence_days: cumulativeAbsence,
     });
 
     // 캔디 지급: AI 분석과 무관하게 즉시 처리 (하루 최대 2개)
     const todayStr = new Date().toISOString().split('T')[0];
-    const user = await User.findByPk(userId);
+    const user = userRecord; // 재사용
     console.log(`[Candy Debug] userId=${userId}, user=${!!user}, current=${user?.current_candy_count}, last_candy_date=${user?.last_candy_date}, daily_candy_count=${user?.daily_candy_count}, todayStr=${todayStr}`);
     if (user && user.current_candy_count < 15) {
       const dailyCount = user.last_candy_date === todayStr ? (user.daily_candy_count || 0) : 0;
@@ -105,8 +125,8 @@ async function processAnalysis(reflection, userId, io) {
       EDU_reflectionText: reflection.EDU_reflectionText,
       EDU_delay_minutes: reflection.EDU_delay_minutes,
       EDU_textCount: reflection.EDU_char_count,
-      cumulative_days: user ? user.attendance_days + 1 : 1,
-      cumulative_absence_days: 0, // 필요 시 로직 추가 가능
+      cumulative_days: reflection.cumulative_days,
+      cumulative_absence_days: reflection.cumulative_absence_days,
       prev_cer: lastAnalysis ? lastAnalysis.cer : 0.0, // 시계열 누적 점수 전달
       service_usage_frequency: 1 // 필요 시 세션 카운트 전달
     };
@@ -117,17 +137,17 @@ async function processAnalysis(reflection, userId, io) {
 
     // D. 분석 결과 DB 저장 및 유저 통계 업데이트 (트랜잭션)
     await sequelize.transaction(async (t) => {
-      // 1. Analyses 테이블 저장 (필드명 매핑 확인 필수)
+      // 1. Analyses 테이블 저장 (수정된 필드명 반영)
       await Analyses.create({
         ReflectionId: reflection.id,
         UserId: userId,
         happy_prob: result.happy_prob,
-        fufill_prob: result.fulfill_prob,   // DB 스키마 오타(fufill) 유지 시
+        fulfill_prob: result.fulfill_prob,
         relief_prob: result.relief_prob,
         gratitude_prob: result.gratitude_prob,
         proud_prob: result.proud_prob,
         sad_prob: result.sad_prob,
-        anxous_prob: result.anxious_prob,  // DB 스키마 오타(anxous) 유지 시
+        anxious_prob: result.anxious_prob,
         defeat_prob: result.defeat_prob,
         stress_prob: result.stress_prob,
         embarrassed_prob: result.embarrassed_prob,

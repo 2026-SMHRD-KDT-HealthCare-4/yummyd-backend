@@ -20,5 +20,7 @@ module.exports = (sequelize) => {
     EDU_reflectionText: { type: DataTypes.TEXT('long') },
     EDU_image:          { type: DataTypes.TEXT('long') },
     EDU_char_count:     { type: DataTypes.INTEGER, defaultValue: 0 },
+    cumulative_days:    { type: DataTypes.INTEGER, defaultValue: 0 },
+    cumulative_absence_days: { type: DataTypes.INTEGER, defaultValue: 0 },
   });
 };

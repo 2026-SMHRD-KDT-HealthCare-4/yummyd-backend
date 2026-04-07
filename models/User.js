@@ -35,8 +35,21 @@ module.exports = (sequelize) => {
     },
     last_candy_date: {
       type: DataTypes.DATEONLY
+    },
+    institution_id: {
+      type: DataTypes.INTEGER
+    },
+    total_candy_count: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
+    },
+    attendance_days: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0
     }
   }, {
-    timestamps: false
+    timestamps: false,
+    underscored: true,
+    tableName: 'Users'
   });
 };
