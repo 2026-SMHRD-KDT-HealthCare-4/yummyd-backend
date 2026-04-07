@@ -41,6 +41,7 @@ Class.belongsTo(Institution, { foreignKey: 'institution_id', ...noFK });
 Class.hasMany(User, { as: 'Students', foreignKey: 'class_id', ...noFK });
 User.belongsTo(Class, { as: 'StudentClass', foreignKey: 'class_id', ...noFK });
 
+
 module.exports = {
   sequelize,
   Institution,
