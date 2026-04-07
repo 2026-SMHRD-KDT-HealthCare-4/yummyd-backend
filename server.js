@@ -46,6 +46,19 @@ const startServer = async () => {
     await sequelize.sync({ constraints: false });
     console.log('✅ Database models synchronized.');
 
+    // daily_candy_count, last_candy_date 컬럼 없으면 추가 (MySQL 버전 호환)
+    const addColumnIfMissing = async (column, definition) => {
+      const [rows] = await sequelize.query(
+        `SHOW COLUMNS FROM \`Users\` LIKE '${column}'`
+      );
+      if (rows.length === 0) {
+        await sequelize.query(`ALTER TABLE \`Users\` ADD COLUMN \`${column}\` ${definition}`);
+        console.log(`✅ Users.${column} 컬럼 추가 완료`);
+      }
+    };
+    await addColumnIfMissing('daily_candy_count', 'INT DEFAULT 0');
+    await addColumnIfMissing('last_candy_date', 'DATE DEFAULT NULL');
+
     const adminPassword = await bcrypt.hash('admin1234', 10);
 
     // 1. 테스트용 기관 계정 생성 (Institution 테이블)

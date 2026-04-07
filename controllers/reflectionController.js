@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { Op } = require('sequelize');
 const { sequelize, Reflection, Analyses, User } = require('../models');
 
 const AI_SERVER_URL = process.env.AI_SERVER_URL;
@@ -39,6 +40,27 @@ exports.createReflection = async (req, res) => {
       EDU_image:          studyImage  || null,
       EDU_char_count:     eduCharCount,
     });
+
+    // 캔디 지급: AI 분석과 무관하게 즉시 처리 (하루 최대 2개)
+    const todayStr = new Date().toISOString().split('T')[0];
+    const user = await User.findByPk(userId);
+    console.log(`[Candy Debug] userId=${userId}, user=${!!user}, current=${user?.current_candy_count}, last_candy_date=${user?.last_candy_date}, daily_candy_count=${user?.daily_candy_count}, todayStr=${todayStr}`);
+    if (user && user.current_candy_count < 15) {
+      const dailyCount = user.last_candy_date === todayStr ? (user.daily_candy_count || 0) : 0;
+      console.log(`[Candy Debug] dailyCount=${dailyCount}`);
+      if (dailyCount < 2) {
+        await user.update({
+          current_candy_count: user.current_candy_count + 1,
+          daily_candy_count: dailyCount + 1,
+          last_candy_date: todayStr,
+        });
+        console.log(`[Candy] userId=${userId} 지급 완료 (오늘 ${dailyCount + 1}/2개)`);
+      } else {
+        console.log(`[Candy] userId=${userId} 오늘 최대 2개 도달 → 지급 안 함`);
+      }
+    } else {
+      console.log(`[Candy Debug] 조건 미충족 → user=${!!user}, current_candy_count=${user?.current_candy_count}`);
+    }
 
     res.status(201).json({
       success: true,
@@ -95,7 +117,7 @@ async function processAnalysis(reflection, userId, text, delayMinutes, io) {
         ReflectionId:     reflection.id,
       }, { transaction: t });
 
-      // User 출석/사탕 업데이트
+      // 출석/스트릭 업데이트 (하루 1회)
       const user = await User.findByPk(userId, { transaction: t });
       if (user) {
         const now = new Date();
@@ -104,17 +126,13 @@ async function processAnalysis(reflection, userId, text, delayMinutes, io) {
         yesterday.setDate(yesterday.getDate() - 1);
         const yesterdayStr = yesterday.toISOString().split('T')[0];
 
-        const updateData = {};
         if (user.last_attendance_date !== todayStr) {
-          updateData.last_attendance_date = todayStr;
-          updateData.attendance_days = (user.attendance_days || 0) + 1;
-          updateData.current_candy_count = (user.current_candy_count || 0) + 1;
-          updateData.total_candy_count = (user.total_candy_count || 0) + 1;
-          updateData.streak = user.last_attendance_date === yesterdayStr
-            ? (user.streak || 0) + 1 : 1;
-        }
-        if (Object.keys(updateData).length > 0) {
-          await user.update(updateData, { transaction: t });
+          await user.update({
+            last_attendance_date: todayStr,
+            attendance_days: (user.attendance_days || 0) + 1,
+            streak: user.last_attendance_date === yesterdayStr
+              ? (user.streak || 0) + 1 : 1,
+          }, { transaction: t });
         }
       }
     });
