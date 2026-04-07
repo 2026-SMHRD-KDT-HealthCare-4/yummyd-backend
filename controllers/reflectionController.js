@@ -1,7 +1,7 @@
 const axios = require('axios');
 const { sequelize, Reflection, Analyses, User } = require('../models');
 
-// 환경 변수에서 AI 서버 주소 로드
+// 환경 변수에서 ML 서버 주소 로드
 const ML_SERVER_URL = process.env.ML_SERVER_URL;
 
 /**
@@ -182,10 +182,22 @@ async function processAnalysis(reflection, userId, io) {
 
     // E. 소켓을 통한 실시간 분석 완료 통보
     if (io) {
+      // 13개 감정 중 가장 확률이 높은 것 찾기
+      const emotions = {
+        happy: result.happy_prob, fulfill: result.fulfill_prob, relief: result.relief_prob,
+        gratitude: result.gratitude_prob, proud: result.proud_prob, sad: result.sad_prob,
+        anxious: result.anxious_prob, defeat: result.defeat_prob, stress: result.stress_prob,
+        embarrassed: result.embarrassed_prob, bored: result.bored_prob, exhausted: result.exhausted_prob,
+        depressed: result.depressed_prob
+      };
+      const dominantEmotion = Object.keys(emotions).reduce((a, b) => emotions[a] > emotions[b] ? a : b);
+
       io.to(`user_${userId}`).emit('analysis_completed', {
         reflectionId: reflection.id,
         dropout_prob: result.dropout_prob,
-        isDanger: result.dropout_prob > 0.65
+        isDanger: result.dropout_prob > 0.65,
+        summary: result.edu_summary,
+        dominantEmotion: dominantEmotion
       });
     }
 
