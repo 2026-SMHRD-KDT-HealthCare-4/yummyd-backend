@@ -1,22 +1,22 @@
-const { DataTypes } = require('sequelize');
+const { DataTypes } = require("sequelize");
 
 module.exports = (sequelize) => {
-  return sequelize.define('Collection', {
-    item_id: { 
-      type: DataTypes.STRING, 
-      allowNull: false 
+  return sequelize.define(
+    "Collection",
+    {
+      id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true
+      },
+      name: DataTypes.STRING,
+      grade: DataTypes.STRING,
+      image_url: DataTypes.STRING,
+      video_url: DataTypes.STRING,
+      weight: DataTypes.INTEGER
     },
-    item_type: { 
-      type: DataTypes.ENUM('hat', 'glass', 'accessory', 'background'), 
-      allowNull: false 
-    },
-    is_equipped: { 
-      type: DataTypes.BOOLEAN, 
-      defaultValue: false 
+    {
+      tableName: "Collections",
+      timestamps: false
     }
-  }, {
-    timestamps: true,
-    underscored: true,
-    tableName: 'Collections'
-  });
+  );
 };
