@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS Reflections (
     heartache_prob DECIMAL(5, 4),
     anxious_prob DECIMAL(5, 4),
     embarrassed_prob DECIMAL(5, 4),
+    cumulative_days INT DEFAULT 0,
+    cumulative_absence_days INT DEFAULT 0,
     image_data LONGTEXT,
     is_private BOOLEAN DEFAULT FALSE,
     analysis_status ENUM('pending', 'analyzing', 'completed', 'failed') DEFAULT 'pending',
@@ -75,4 +77,32 @@ CREATE TABLE IF NOT EXISTS Reflections (
     INDEX idx_user_submitted (user_id, submitted_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 5~7번 테이블 생략 (동일한 로직으로 TIMESTAMP 자동화 적용 권장)
+-- 5. AI 분석 결과 (KOTE 13종 감정확률 + ERS/CER/이탈확률 + GPT 요약)
+CREATE TABLE IF NOT EXISTS `Analyses` (
+    `id`               INT AUTO_INCREMENT PRIMARY KEY,
+    `happy_prob`       FLOAT,
+    `fulfill_prob`     FLOAT,
+    `relief_prob`      FLOAT,
+    `gratitude_prob`   FLOAT,
+    `proud_prob`       FLOAT,
+    `sad_prob`         FLOAT,
+    `anxious_prob`     FLOAT,
+    `defeat_prob`      FLOAT,
+    `stress_prob`      FLOAT,
+    `embarrassed_prob` FLOAT,
+    `bored_prob`       FLOAT,
+    `exhausted_prob`   FLOAT,
+    `depressed_prob`   FLOAT,
+    `ers`              FLOAT COMMENT '감정 회복 점수',
+    `cer`              FLOAT COMMENT '누적 감정 위험 지수',
+    `dropout_prob`     FLOAT COMMENT '중도이탈 확률',
+    `gpt_EDU_summary`  TEXT  COMMENT 'GPT 학습 요약',
+    `ReflectionId`     INT,
+    `UserId`           INT,
+    `createdAt`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `updatedAt`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_analyses_user (UserId),
+    INDEX idx_analyses_reflection (ReflectionId)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 6~7번 테이블 생략 (동일한 로직으로 TIMESTAMP 자동화 적용 권장)
