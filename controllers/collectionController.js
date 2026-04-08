@@ -1,72 +1,155 @@
-const { User, Collection } = require('../models');
+const { Op } = require("sequelize");
+const { Collection, CollectionUsers, User } = require("../models");
 
-// 가상의 아이템 데이터베이스 (실제 환경에서는 별도 테이블이나 설정 파일로 관리 권장)
-const ITEM_POOL = [
-  { id: 'h1', type: 'hat', name: '빨간 모자' },
-  { id: 'h2', type: 'hat', name: '파란 캡' },
-  { id: 'g1', type: 'glass', name: '검정 선글라스' },
-  { id: 'g2', type: 'glass', name: '동그란 안경' },
-  { id: 'a1', type: 'accessory', name: '반짝이는 목걸이' },
-  { id: 'b1', type: 'background', name: '푸른 숲' },
-  // ... 더 많은 아이템 추가 가능
-];
-
-exports.drawItem = async (req, res) => {
-  const { userId } = req.body;
+const drawItem = async (req, res) => {
   try {
+    const { userId } = req.body;
+
+    // 1. 유저 조회
     const user = await User.findByPk(userId);
-    if (!user || user.current_candy_count < 1) {
-      return res.status(400).json({ success: false, message: "캔디가 부족합니다!" });
+
+    if (!user) {
+      return res.json({
+        success: false,
+        message: "유저 없음"
+      });
     }
 
-    // 1. 캔디 소모
-    await user.update({ current_candy_count: user.current_candy_count - 1 });
+    // 2. 캔디 확인 (2개 필요)
+    if (user.current_candy_count < 2) {
+      return res.json({
+        success: false,
+        message: "캔디가 부족합니다"
+      });
+    }
 
-    // 2. 랜덤 아이템 추첨
-    const randomItem = ITEM_POOL[Math.floor(Math.random() * ITEM_POOL.length)];
-
-    // 3. 중복 체크 및 컬렉션 추가
-    const [collection, created] = await Collection.findOrCreate({
-      where: { UserId: userId, item_id: randomItem.id },
-      defaults: { item_type: randomItem.type, is_equipped: false }
+    // 3. 이미 보유한 아바타 조회
+    const owned = await CollectionUsers.findAll({
+      where: { user_id: userId },
+      attributes: ["collection_id"]
     });
 
-    res.json({ 
-      success: true, 
-      item: randomItem, 
-      isNew: created, 
-      currentCandy: user.current_candy_count 
+    const ownedIds = owned.map(o => o.collection_id);
+
+    // 4. 보유하지 않은 아바타만 가져오기
+    const available = await Collection.findAll({
+      where: {
+        id: {
+          [Op.notIn]: ownedIds.length ? ownedIds : [0]
+        }
+      }
     });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+
+    if (available.length === 0) {
+      return res.json({
+        success: false,
+        message: "모든 아바타를 이미 보유중입니다"
+      });
+    }
+
+    // 5. 확률 랜덤 뽑기
+    const item = drawRandom(available);
+
+    // 6. 컬렉션 추가
+    await CollectionUsers.create({
+      user_id: userId,
+      collection_id: item.id,
+      is_equipped: false
+    });
+
+    // 7. 캔디 차감
+    user.current_candy_count -= 2;
+    await user.save();
+
+    res.json({
+      success: true,
+      item
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.json({
+      success: false,
+      message: "draw error"
+    });
   }
 };
 
-exports.getCollection = async (req, res) => {
+function drawRandom(items) {
+  const total = items.reduce((sum, i) => sum + i.weight, 0);
+  let rand = Math.random() * total;
+
+  for (const item of items) {
+    rand -= item.weight;
+    if (rand <= 0) return item;
+  }
+
+  return items[0];
+}
+
+const fetchCollection = async (req, res) => {
   try {
-    const items = await Collection.findAll({ where: { UserId: req.params.userId } });
-    res.json({ success: true, data: items });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    const { userId } = req.params;
+
+    const list = await CollectionUsers.findAll({
+      where: { user_id: userId },
+      include: [
+        {
+          model: Collection
+        }
+      ]
+    });
+
+    res.json({
+      success: true,
+      data: list
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.json({
+      success: false,
+      message: "fetch collection error"
+    });
   }
 };
 
-exports.toggleEquip = async (req, res) => {
-  const { userId, itemId } = req.body;
+const toggleEquip = async (req, res) => {
   try {
-    const item = await Collection.findOne({ where: { UserId: userId, item_id: itemId } });
-    if (!item) return res.status(404).json({ success: false, message: "Item not found" });
+    const { userId, itemId } = req.body;
 
-    // 같은 타입의 다른 아이템 해제 (카테고리별 하나만 착용)
-    await Collection.update(
+    // 전체 해제
+    await CollectionUsers.update(
       { is_equipped: false },
-      { where: { UserId: userId, item_type: item.item_type } }
+      { where: { user_id: userId } }
     );
 
-    // 선택한 아이템 착용
-    await item.update({ is_equipped: !item.is_equipped });
-    res.json({ success: true, isEquipped: item.is_equipped });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    // 선택 장착
+    await CollectionUsers.update(
+      { is_equipped: true },
+      {
+        where: {
+          user_id: userId,
+          collection_id: itemId
+        }
+      }
+    );
+
+    res.json({
+      success: true
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.json({
+      success: false,
+      message: "toggle equip error"
+    });
   }
+};
+
+module.exports = {
+  drawItem,
+  fetchCollection,
+  toggleEquip
 };

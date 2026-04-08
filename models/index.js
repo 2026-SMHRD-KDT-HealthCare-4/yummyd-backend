@@ -20,6 +20,7 @@ const User = require('./User')(sequelize);
 const Reflection = require('./Reflection')(sequelize);
 const Analyses = require('./Analyses')(sequelize);
 const Collection = require('./Collection')(sequelize);
+const CollectionUsers = require('./CollectionUsers')(sequelize);
 
 // 관계 설정 (constraints: false → 공유 DB FK 타입 충돌 방지)
 const noFK = { constraints: false };
@@ -33,9 +34,11 @@ Analyses.belongsTo(Reflection, noFK);
 User.hasMany(Analyses, noFK);
 Analyses.belongsTo(User, noFK);
 
-User.hasMany(Collection, noFK);
-Collection.belongsTo(User, noFK);
+User.hasMany(CollectionUsers, { foreignKey: "user_id", ...noFK });
+CollectionUsers.belongsTo(User, { foreignKey: "user_id", ...noFK });
 
+Collection.hasMany(CollectionUsers, { foreignKey: "collection_id", ...noFK });
+CollectionUsers.belongsTo(Collection, { foreignKey: "collection_id", ...noFK });
 
 // Institutions → Classes → Users 계층 관계
 Institution.hasMany(Class, { foreignKey: 'institution_id', ...noFK });
@@ -52,5 +55,6 @@ module.exports = {
   User,
   Reflection,
   Analyses,
-  Collection
+  Collection,
+  CollectionUsers
 };

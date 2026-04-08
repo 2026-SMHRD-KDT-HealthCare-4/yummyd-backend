@@ -1,10 +1,15 @@
-const express = require('express');
-const router = express.Router();
-const collectionController = require('../controllers/collectionController');
-const authMiddleware = require('../middlewares/authMiddleware');
+const express = require("express");
+const { drawItem, toggleEquip, fetchCollection } = require("../controllers/collectionController");
 
-router.post('/draw', authMiddleware, collectionController.drawItem);
-router.get('/:userId', authMiddleware, collectionController.getCollection);
-router.post('/toggle-equip', authMiddleware, collectionController.toggleEquip);
+const router = express.Router();
+
+// 뽑기
+router.post("/draw", drawItem);
+
+// 장착 변경
+router.post("/toggle-equip", toggleEquip);
+
+// 컬렉션 조회
+router.get("/:userId", fetchCollection);
 
 module.exports = router;
