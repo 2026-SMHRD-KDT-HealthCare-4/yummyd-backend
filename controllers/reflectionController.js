@@ -13,6 +13,7 @@ exports.createReflection = async (req, res) => {
   } = req.body;
   const io = req.app.get('socketio');
 
+  // AI 분석용으로 모든 텍스트 병합 (기존 로직 유지)
   const combinedText = `[Goal] ${todayGoal || ''}\n[Learned] ${learned || ''}\n[Confused] ${confused || ''}\n[Review] ${review || ''}\n[Memo] ${freeText || ''}`;
 
   try {
@@ -24,11 +25,16 @@ exports.createReflection = async (req, res) => {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
+    // 1. 회고 데이터 생성 (최신 필드명 매핑)
     const reflection = await Reflection.create({
       userId: userId,
-      origin_text: combinedText,
-      image_data: image || studyImage || null,
-      analysis_status: 'pending'
+      originText: combinedText, // field: EMO_reflectionText
+      imageData: image || studyImage || null, // field: EMO_image
+      eduGoal: todayGoal,
+      eduLearned: learned,
+      eduConfused: confused,
+      eduReview: review,
+      eduReflectionText: freeText
     });
 
     const todayReflectionCount = await Reflection.count({
@@ -59,6 +65,7 @@ exports.createReflection = async (req, res) => {
 
     res.status(201).json({ success: true, message: '등록 성공', data: { id: reflection.id } });
     
+    // 비동기 AI 분석 처리
     processAnalysis(reflection, userId, io, { combinedText }).catch(err => console.error('[ProcessAnalysis Error]:', err));
 
   } catch (error) {
@@ -73,12 +80,12 @@ exports.createReflection = async (req, res) => {
 async function processAnalysis(reflection, userId, io, rawData) {
   try {
     const lastAnalysis = await Analyses.findOne({ 
-      where: { UserId: userId }, 
+      where: { userId: userId }, 
       order: [['createdAt', 'DESC']] 
     });
 
     const aiResponse = await axios.post(`${ML_SERVER_URL}/api/v1/analyze`, {
-      reflection_id: reflection.id,
+      reflection_id: reflection.id.toString(), // BIGINT 대응을 위해 문자열 변환
       UserId: userId,
       EMO_reflectionText: rawData.combinedText,
       prev_cer: lastAnalysis ? lastAnalysis.cer : 0.0
@@ -87,32 +94,28 @@ async function processAnalysis(reflection, userId, io, rawData) {
     const result = aiResponse.data;
 
     await sequelize.transaction(async (t) => {
+      // 1. 상세 분석 데이터 생성
       await Analyses.create({
-        ReflectionId: reflection.id,
-        UserId: userId,
-        happy_prob: result.happy_prob ?? 0.0,
-        sad_prob: result.sad_prob ?? 0.0,
-        anxious_prob: result.anxious_prob ?? 0.0,
+        reflectionId: reflection.id,
+        userId: userId,
+        happyProb: result.happy_prob ?? 0.0,
+        sadProb: result.sad_prob ?? 0.0,
+        anxiousProb: result.anxious_prob ?? 0.0,
         ers: result.ERS ?? 0.0,
         cer: result.CER ?? 0.0,
-        dropout_prob: result.dropout_prob ?? 0.0,
-        gpt_EDU_summary: result.edu_summary ?? ''
+        dropoutProb: result.dropout_prob ?? 0.0,
+        gptEduSummary: result.edu_summary ?? ''
       }, { transaction: t });
 
+      // 2. 회고 요약 정보 업데이트 (필요 시 필드 추가 매핑)
       await reflection.update({
-        analysis_status: 'completed',
-        rep_emotion: result.dominant_emotion || 'happy',
-        gpt_summary: result.edu_summary || '',
-        happy_prob: result.happy_prob ?? 0.0,
-        sad_prob: result.sad_prob ?? 0.0,
-        anxious_prob: result.anxious_prob ?? 0.0
+        emoji: result.dominant_emotion || 'happy'
       }, { transaction: t });
     });
 
     if (io) io.to(`user_${userId}`).emit('analysis_completed', { reflectionId: reflection.id });
   } catch (error) {
     console.error('[Analysis Failed]:', error);
-    await reflection.update({ analysis_status: 'failed' });
   }
 }
 
@@ -150,7 +153,7 @@ exports.getBoard = async (req, res) => {
     };
 
     if (posts.length > 0) {
-      const emotions = posts.map(p => p.rep_emotion).filter(e => e);
+      const emotions = posts.map(p => p.emoji).filter(e => e); // rep_emotion 대신 emoji 사용
       if (emotions.length > 0) {
         const counts = emotions.reduce((acc, e) => {
           acc[e] = (acc[e] || 0) + 1;
@@ -176,8 +179,8 @@ exports.updateReflection = async (req, res) => {
     const reflection = await Reflection.findByPk(req.params.id);
     if (!reflection) return res.status(404).json({ success: false, message: 'Not found' });
     
-    const newText = req.body.text || req.body.origin_text;
-    await reflection.update({ origin_text: newText, analysis_status: 'pending' });
+    const newText = req.body.text || req.body.origin_text || req.body.originText;
+    await reflection.update({ originText: newText });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
