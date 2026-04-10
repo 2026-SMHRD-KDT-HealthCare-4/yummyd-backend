@@ -237,7 +237,7 @@ exports.updateReflection = async (req, res) => {
     if (!reflection) return res.status(404).json({ success: false, message: 'Not found' });
     
     const newText = req.body.text || req.body.origin_text || req.body.originText;
-    await reflection.update({ originText: newText });
+    await reflection.update({ EDU_reflectionText: newText });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
