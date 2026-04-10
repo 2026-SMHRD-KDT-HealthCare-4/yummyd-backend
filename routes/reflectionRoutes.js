@@ -5,6 +5,7 @@ const reflectionController = require('../controllers/reflectionController');
 router.post('/reflection', reflectionController.createReflection);
 router.get('/history/:userId', reflectionController.getHistory);
 router.get('/board', reflectionController.getBoard);
-router.post('/reset-jar', reflectionController.resetJar); // 유리병 비우기 라우트 추가
+router.post('/reset-jar', reflectionController.resetJar);
+router.put('/update/:id', reflectionController.updateReflection); // 수정 API 추가
 
 module.exports = router;
