@@ -2,7 +2,11 @@ const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
   return sequelize.define('Analyses', {
-    // 감정 확률 (KOTE 13종)
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
     happy_prob:       { type: DataTypes.FLOAT },
     fulfill_prob:     { type: DataTypes.FLOAT },
     relief_prob:      { type: DataTypes.FLOAT },
@@ -16,20 +20,29 @@ module.exports = (sequelize) => {
     bored_prob:       { type: DataTypes.FLOAT },
     exhausted_prob:   { type: DataTypes.FLOAT },
     depressed_prob:   { type: DataTypes.FLOAT },
-
-    // 분석 결과 지표
-    ers:             { type: DataTypes.FLOAT }, // 감정 회복 점수
-    cer:             { type: DataTypes.FLOAT }, // 누적 감정 위험 지수
-    dropout_prob:    { type: DataTypes.FLOAT }, // 중도이탈 확률
-
-    // GPT 분석 결과
-    gpt_EDU_summary: { type: DataTypes.TEXT },
-
-    // FK (Reflections 및 Users 관계)
-    ReflectionId:    { type: DataTypes.INTEGER },
-    UserId:          { type: DataTypes.INTEGER },
+    ers:              { type: DataTypes.FLOAT },
+    cer:              { type: DataTypes.FLOAT },
+    dropout_prob:     { type: DataTypes.FLOAT },
+    gpt_EDU_summary:  { type: DataTypes.TEXT },
+    ReflectionId: { 
+      type: DataTypes.INTEGER, 
+      field: 'ReflectionId' // DB 컬럼명 강제 지정
+    },
+    UserId: { 
+      type: DataTypes.INTEGER, 
+      field: 'UserId' // DB 컬럼명 강제 지정
+    },
+    createdAt: {
+      type: DataTypes.DATE,
+      field: 'createdAt'
+    },
+    updatedAt: {
+      type: DataTypes.DATE,
+      field: 'updatedAt'
+    }
   }, {
     tableName: 'Analyses',
     timestamps: true,
+    underscored: false
   });
 };

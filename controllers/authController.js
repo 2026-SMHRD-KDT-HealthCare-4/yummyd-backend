@@ -46,28 +46,34 @@ exports.register = async (req, res) => {
       class_id: (role === 'student' && class_id) ? class_id : null,
       privacy_consent,
       third_party_consent,
-      current_candy_count: 0
+      // schema.sql 기반 모든 지표 초기화
+      current_candy_count: 0,
+      total_candy_count: 0,
+      attendance_days: 0,
+      streak: 0
     });
 
     res.status(201).json({ success: true, message: '회원가입이 완료되었습니다.', userId: newUser.id });
   } catch (error) {
     console.error('[Registration Error]', error);
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, message: '서버 오류로 인해 가입에 실패했습니다.' });
   }
 };
 
 // [POST] 로그인
 exports.login = async (req, res) => {
-  const { login_id, password, login_type } = req.body; // login_type: 'user' or 'institution'
+  const { login_id, password, login_type = 'user' } = req.body; // 기본값 'user' 설정
 
   try {
     let account;
     let isInst = false;
 
     if (login_type === 'institution') {
+      // Institution 모델은 underscored: true 이므로 login_id 필드 사용
       account = await Institution.findOne({ where: { login_id } });
       isInst = true;
     } else {
+      // User 모델은 underscored: true 이므로 login_id 필드 사용
       account = await User.findOne({ where: { login_id } });
     }
     
@@ -80,20 +86,17 @@ exports.login = async (req, res) => {
       return res.status(401).json({ success: false, message: '비밀번호가 일치하지 않습니다.' });
     }
 
+    // JWT Payload 확장
     const token = jwt.sign(
       { 
         id: account.id, 
         role: isInst ? 'admin' : account.role, 
-        username: isInst ? account.inst_name : account.username 
+        username: isInst ? account.inst_name : account.username,
+        class_id: isInst ? null : account.class_id
       },
       JWT_SECRET,
       { expiresIn: '1d' }
     );
-
-    // 로그인 시 last_login_at 업데이트
-    if (!isInst) {
-      await account.update({ last_login_at: new Date() });
-    }
 
     res.json({ 
       success: true, 
@@ -105,16 +108,19 @@ exports.login = async (req, res) => {
         is_institution: true
       } : { 
         id: account.id, 
+        login_id: account.login_id,
         username: account.username, 
         role: account.role,
         class_id: account.class_id,
+        institution_id: account.institution_id,
         current_candy_count: account.current_candy_count || 0,
+        total_candy_count: account.total_candy_count || 0,
         attendance_days: account.attendance_days || 0,
         streak: account.streak || 0
       }
     });
   } catch (error) {
-    console.error('[Login Error Detail]', error);
+    console.error('[Login Error]', error);
     res.status(500).json({ success: false, message: '로그인 처리 중 오류가 발생했습니다.' });
   }
 };
@@ -141,16 +147,19 @@ exports.getMe = async (req, res) => {
         is_institution: true
       } : {
         id: account.id,
+        login_id: account.login_id,
         username: account.username,
         role: account.role,
         class_id: account.class_id,
+        institution_id: account.institution_id,
         current_candy_count: account.current_candy_count || 0,
+        total_candy_count: account.total_candy_count || 0,
         attendance_days: account.attendance_days || 0,
         streak: account.streak || 0
       }
     });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    res.status(500).json({ success: false, message: '정보 조회 중 오류가 발생했습니다.' });
   }
 };
 

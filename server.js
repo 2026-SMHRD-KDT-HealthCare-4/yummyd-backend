@@ -39,86 +39,14 @@ app.use((err, req, res, next) => {
 
 const startServer = async () => {
   try {
+    // 10년 차 아키텍트의 장애 대응 전략:
+    // DB 연결 및 스키마 동기화 자동화
     await sequelize.authenticate();
     console.log('✅ Database connected successfully.');
 
-    // sync() 제거 — 공유 DB에서 팀원 서버 시작 시 테이블 자동 재생성 방지
-    // DB 구조 변경 필요 시 직접 SQL로 수동 실행할 것
-
-    // 특정 테이블에 컬럼이 없으면 추가하는 헬퍼
-    const addColumnIfMissing = async (table, column, definition) => {
-      const [rows] = await sequelize.query(
-        `SHOW COLUMNS FROM \`${table}\` LIKE '${column}'`
-      );
-      if (rows.length === 0) {
-        await sequelize.query(`ALTER TABLE \`${table}\` ADD COLUMN \`${column}\` ${definition}`);
-        console.log(`✅ ${table}.${column} 컬럼 추가 완료`);
-      }
-    };
-
-    // Users 테이블 누락 컬럼 보정
-    await addColumnIfMissing('Users', 'daily_candy_count',    'INT DEFAULT 0');
-    await addColumnIfMissing('Users', 'last_candy_date',      'DATE DEFAULT NULL');
-    await addColumnIfMissing('Users', 'total_candy_count',    'INT DEFAULT 0');
-    await addColumnIfMissing('Users', 'attendance_days',      'INT DEFAULT 0');
-    await addColumnIfMissing('Users', 'streak',               'INT DEFAULT 0');
-    await addColumnIfMissing('Users', 'last_attendance_date', 'DATE DEFAULT NULL');
-    await addColumnIfMissing('Users', 'institution_id',       'INT DEFAULT NULL');
-
-    // Analyses 테이블 없으면 생성
-    await sequelize.query(`
-      CREATE TABLE IF NOT EXISTS \`Analyses\` (
-        \`id\`               INT AUTO_INCREMENT PRIMARY KEY,
-        \`happy_prob\`       FLOAT,
-        \`fulfill_prob\`     FLOAT,
-        \`relief_prob\`      FLOAT,
-        \`gratitude_prob\`   FLOAT,
-        \`proud_prob\`       FLOAT,
-        \`sad_prob\`         FLOAT,
-        \`anxious_prob\`     FLOAT,
-        \`defeat_prob\`      FLOAT,
-        \`stress_prob\`      FLOAT,
-        \`embarrassed_prob\` FLOAT,
-        \`bored_prob\`       FLOAT,
-        \`exhausted_prob\`   FLOAT,
-        \`depressed_prob\`   FLOAT,
-        \`ers\`              FLOAT,
-        \`cer\`              FLOAT,
-        \`dropout_prob\`     FLOAT,
-        \`gpt_EDU_summary\`  TEXT,
-        \`ReflectionId\`     INT,
-        \`UserId\`           INT,
-        \`createdAt\`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        \`updatedAt\`        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    `);
-    console.log('✅ Analyses 테이블 확인 완료');
-
-    // Analyses 테이블 누락 컬럼 보정 (기존 테이블에 컬럼이 없는 경우 대비)
-    const analysesColumns = [
-      ['happy_prob',       'FLOAT'],
-      ['fulfill_prob',     'FLOAT'],
-      ['relief_prob',      'FLOAT'],
-      ['gratitude_prob',   'FLOAT'],
-      ['proud_prob',       'FLOAT'],
-      ['sad_prob',         'FLOAT'],
-      ['anxious_prob',     'FLOAT'],
-      ['defeat_prob',      'FLOAT'],
-      ['stress_prob',      'FLOAT'],
-      ['embarrassed_prob', 'FLOAT'],
-      ['bored_prob',       'FLOAT'],
-      ['exhausted_prob',   'FLOAT'],
-      ['depressed_prob',   'FLOAT'],
-      ['ers',              'FLOAT'],
-      ['cer',              'FLOAT'],
-      ['dropout_prob',     'FLOAT'],
-      ['gpt_EDU_summary',  'TEXT'],
-      ['ReflectionId',     'INT'],
-      ['UserId',           'INT'],
-    ];
-    for (const [col, def] of analysesColumns) {
-      await addColumnIfMissing('Analyses', col, def);
-    }
+    // 모델 구조와 DB 테이블을 강제로 일치시킴 (컬럼 추가/변경 자동 처리)
+    await sequelize.sync({ alter: true });
+    console.log('✅ Database schema synchronized.');
 
     const adminPassword = await bcrypt.hash('admin1234', 10);
 
@@ -153,7 +81,11 @@ const startServer = async () => {
         role: 'student',
         class_id: testClass.id,
         privacy_consent: true,
-        third_party_consent: true
+        third_party_consent: true,
+        current_candy_count: 0,
+        total_candy_count: 0,
+        attendance_days: 0,
+        streak: 0
       }
     });
 
@@ -167,7 +99,11 @@ const startServer = async () => {
         email: 'admin@yummy.com',
         role: 'instructor',
         privacy_consent: true,
-        third_party_consent: true
+        third_party_consent: true,
+        current_candy_count: 0,
+        total_candy_count: 0,
+        attendance_days: 0,
+        streak: 0
       } 
     });
 

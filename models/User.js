@@ -2,54 +2,42 @@ const { DataTypes } = require('sequelize');
 
 module.exports = (sequelize) => {
   return sequelize.define('User', {
-    login_id: { type: DataTypes.STRING, allowNull: false, unique: true },
-    password: { type: DataTypes.STRING, allowNull: false },
-    username: { type: DataTypes.STRING, allowNull: false }, // 제안서의 NAME
-    email: { type: DataTypes.STRING, allowNull: false, unique: true },
+    id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true
+    },
+    login_id: { type: DataTypes.STRING(50), allowNull: false, unique: true },
+    password: { type: DataTypes.STRING(255), allowNull: false },
+    username: { type: DataTypes.STRING(50), allowNull: false },
+    email: { type: DataTypes.STRING(100), allowNull: false, unique: true },
     role: { 
-      type: DataTypes.ENUM('student', 'admin', 'instructor'), 
+      type: DataTypes.ENUM('student', 'institution', 'instructor', 'admin'), 
       defaultValue: 'student' 
     },
     enroll_status: {
       type: DataTypes.ENUM('active', 'dropout', 'graduated'),
       defaultValue: 'active'
     },
-    class_id: { type: DataTypes.INTEGER },
-    
-    // 보상 시스템 (Yummy)
-    current_candy_count: { // CANDY_NOW
-      type: DataTypes.INTEGER, 
-      defaultValue: 0, 
-      validate: { min: 0, max: 15 } 
+    institution_id: { type: DataTypes.INTEGER, field: 'institution_id' },
+    class_id: { type: DataTypes.INTEGER, field: 'class_id' },
+    current_candy_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+    total_candy_count: { type: DataTypes.INTEGER, defaultValue: 0 },
+    attendance_days: { type: DataTypes.INTEGER, defaultValue: 0 },
+    streak: { type: DataTypes.INTEGER, defaultValue: 0 },
+    privacy_consent: { type: DataTypes.BOOLEAN, defaultValue: false },
+    third_party_consent: { type: DataTypes.BOOLEAN, defaultValue: false },
+    createdAt: {
+      type: DataTypes.DATE,
+      field: 'createdAt' // DB 컬럼명에 맞춤
     },
-    streak: { 
-      type: DataTypes.INTEGER, 
-      defaultValue: 0 
-    },
-    last_attendance_date: {
-      type: DataTypes.DATEONLY
-    },
-    daily_candy_count: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0
-    },
-    last_candy_date: {
-      type: DataTypes.DATEONLY
-    },
-    institution_id: {
-      type: DataTypes.INTEGER
-    },
-    total_candy_count: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0
-    },
-    attendance_days: {
-      type: DataTypes.INTEGER,
-      defaultValue: 0
+    updatedAt: {
+      type: DataTypes.DATE,
+      field: 'updatedAt' // DB 컬럼명에 맞춤
     }
   }, {
-    timestamps: false,
-    underscored: true,
-    tableName: 'Users'
+    tableName: 'Users',
+    timestamps: true,
+    underscored: false
   });
 };

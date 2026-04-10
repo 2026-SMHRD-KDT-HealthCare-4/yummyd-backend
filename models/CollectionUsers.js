@@ -1,7 +1,7 @@
 const { DataTypes } = require("sequelize");
 
 module.exports = (sequelize) => {
-  const CollectionUsers = sequelize.define(
+  return sequelize.define(
     "CollectionUsers",
     {
       id: {
@@ -24,9 +24,8 @@ module.exports = (sequelize) => {
     },
     {
       tableName: "Collections_Users",
-      timestamps: false
+      timestamps: false,
+      underscored: false
     }
   );
-
-  return CollectionUsers;
 };
