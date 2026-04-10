@@ -45,7 +45,7 @@ const startServer = async () => {
     console.log('✅ Database connected successfully.');
 
     // 모델 구조와 DB 테이블을 강제로 일치시킴 (컬럼 추가/변경 자동 처리)
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ constraints: false });
     console.log('✅ Database schema synchronized.');
 
     const adminPassword = await bcrypt.hash('admin1234', 10);

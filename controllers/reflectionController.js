@@ -9,7 +9,8 @@ const ML_SERVER_URL = process.env.ML_SERVER_URL;
  */
 exports.createReflection = async (req, res) => {
   const {
-    userId, todayGoal, learned, confused, review, freeText, image, studyImage
+    userId, todayGoal, learned, confused, review, freeText, image, studyImage,
+    EMO_reflectionText, EDU_achievement, emotionEmoji, selectedSpell, delayMinutes
   } = req.body;
   const io = req.app.get('socketio');
 
@@ -25,16 +26,49 @@ exports.createReflection = async (req, res) => {
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
-    // 1. 회고 데이터 생성 (최신 필드명 매핑)
+    // 1. cumulative_days, cumulative_absence_days 계산
+    const allReflections = await Reflection.findAll({
+      where: { userId: userId },
+      attributes: ['createdAt'],
+      order: [['createdAt', 'ASC']]
+    });
+
+    const cumulativeDays = allReflections.length + 1; // 현재 작성 포함
+
+    let cumulativeAbsenceDays = 0;
+    if (allReflections.length > 0) {
+      const firstDate = new Date(allReflections[0].createdAt);
+      firstDate.setHours(0, 0, 0, 0);
+      const writtenDays = new Set(
+        allReflections.map(r => new Date(r.createdAt).toISOString().split('T')[0])
+      );
+      writtenDays.add(today.toISOString().split('T')[0]); // 오늘 포함
+      let cursor = new Date(firstDate);
+      const todayStr = today.toISOString().split('T')[0];
+      while (cursor.toISOString().split('T')[0] <= todayStr) {
+        const dateStr = cursor.toISOString().split('T')[0];
+        if (!writtenDays.has(dateStr)) cumulativeAbsenceDays++;
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    }
+
+    // 2. 회고 데이터 생성 (최신 필드명 매핑)
     const reflection = await Reflection.create({
       userId: userId,
-      originText: combinedText, // field: EMO_reflectionText
-      imageData: image || studyImage || null, // field: EMO_image
-      eduGoal: todayGoal,
-      eduLearned: learned,
-      eduConfused: confused,
-      eduReview: review,
-      eduReflectionText: freeText
+      EMO_reflectionText: EMO_reflectionText || combinedText,
+      EMO_image: image || studyImage || null,
+      EMO_emoji: emotionEmoji || null,
+      EMO_spell: selectedSpell || null,
+      EDU_goal: todayGoal,
+      EDU_achievement: EDU_achievement || null,
+      EDU_learned: learned,
+      EDU_confused: confused,
+      EDU_review: review,
+      EDU_reflectionText: freeText,
+      EDU_char_count: freeText?.length || 0,
+      EDU_delay_time: delayMinutes || 0,
+      cumulativeDays: cumulativeDays,
+      cumulativeAbsenceDays: cumulativeAbsenceDays,
     });
 
     const todayReflectionCount = await Reflection.count({
@@ -44,7 +78,7 @@ exports.createReflection = async (req, res) => {
       }
     });
 
-    if (todayReflectionCount === 1) {
+    if (todayReflectionCount <= 2) {
       const yesterdayReflectionCount = await Reflection.count({
         where: {
           userId: userId,
@@ -85,9 +119,22 @@ async function processAnalysis(reflection, userId, io, rawData) {
     });
 
     const aiResponse = await axios.post(`${ML_SERVER_URL}/api/v1/analyze`, {
-      reflection_id: reflection.id.toString(), // BIGINT 대응을 위해 문자열 변환
+      reflection_id: reflection.id,
       UserId: userId,
+      EMO_emoji: reflection.EMO_emoji || 'happy',
+      EMO_spell: reflection.EMO_spell || '',
       EMO_reflectionText: rawData.combinedText,
+      EMO_image: reflection.EMO_image || null,
+      EDU_goal: reflection.EDU_goal || null,
+      EDU_achievement: reflection.EDU_achievement || null,
+      EDU_learned: reflection.EDU_learned || null,
+      EDU_confused: reflection.EDU_confused || null,
+      EDU_review: reflection.EDU_review || null,
+      EDU_reflectionText: reflection.EDU_reflectionText || null,
+      EDU_delay_minutes: reflection.EDU_delay_time || 0,
+      EDU_textCount: reflection.EDU_char_count || 0,
+      cumulative_days: reflection.cumulativeDays || 1,
+      cumulative_absence_days: reflection.cumulativeAbsenceDays || 0,
       prev_cer: lastAnalysis ? lastAnalysis.cer : 0.0
     }, { timeout: 45000 });
 
@@ -98,13 +145,23 @@ async function processAnalysis(reflection, userId, io, rawData) {
       await Analyses.create({
         reflectionId: reflection.id,
         userId: userId,
-        happyProb: result.happy_prob ?? 0.0,
-        sadProb: result.sad_prob ?? 0.0,
-        anxiousProb: result.anxious_prob ?? 0.0,
-        ers: result.ERS ?? 0.0,
-        cer: result.CER ?? 0.0,
-        dropoutProb: result.dropout_prob ?? 0.0,
-        gptEduSummary: result.edu_summary ?? ''
+        happyProb:       result.happy_prob       ?? 0.0,
+        fulfillProb:     result.fulfill_prob      ?? 0.0,
+        reliefProb:      result.relief_prob       ?? 0.0,
+        gratitudeProb:   result.gratitude_prob    ?? 0.0,
+        proudProb:       result.proud_prob        ?? 0.0,
+        sadProb:         result.sad_prob          ?? 0.0,
+        anxiousProb:     result.anxious_prob      ?? 0.0,
+        defeatProb:      result.defeat_prob       ?? 0.0,
+        stressProb:      result.stress_prob       ?? 0.0,
+        embarrassedProb: result.embarrassed_prob  ?? 0.0,
+        boredProb:       result.bored_prob        ?? 0.0,
+        exhaustedProb:   result.exhausted_prob    ?? 0.0,
+        depressedProb:   result.depressed_prob    ?? 0.0,
+        ers:             result.ERS               ?? 0.0,
+        cer:             result.CER               ?? 0.0,
+        dropoutProb:     result.dropout_prob      ?? 0.0,
+        gptEduSummary:   result.edu_summary       ?? ''
       }, { transaction: t });
 
       // 2. 회고 요약 정보 업데이트 (필요 시 필드 추가 매핑)
