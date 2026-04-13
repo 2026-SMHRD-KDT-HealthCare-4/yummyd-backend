@@ -8,14 +8,12 @@ module.exports = (sequelize) => {
       autoIncrement: true
     },
     happyProb:       { type: DataTypes.FLOAT, field: 'happy_prob' },
-    fulfillProb:     { type: DataTypes.FLOAT, field: 'fulfill_prob' }, // fulfill_prob로 매핑
-    fufillProb_old:  { type: DataTypes.FLOAT, field: 'fufill_prob' },  // DB 오타 필드 유지
+    fulfillProb:     { type: DataTypes.FLOAT, field: 'fulfill_prob' },
     reliefProb:      { type: DataTypes.FLOAT, field: 'relief_prob' },
     gratitudeProb:   { type: DataTypes.FLOAT, field: 'gratitude_prob' },
     proudProb:       { type: DataTypes.FLOAT, field: 'proud_prob' },
     sadProb:         { type: DataTypes.FLOAT, field: 'sad_prob' },
     anxiousProb:     { type: DataTypes.FLOAT, field: 'anxious_prob' },
-    anxousProb_old:  { type: DataTypes.FLOAT, field: 'anxous_prob' },  // DB 오타 필드 유지
     defeatProb:      { type: DataTypes.FLOAT, field: 'defeat_prob' },
     stressProb:      { type: DataTypes.FLOAT, field: 'stress_prob' },
     embarrassedProb: { type: DataTypes.FLOAT, field: 'embarrassed_prob' },

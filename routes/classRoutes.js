@@ -15,4 +15,7 @@ router.post('/create', verifyToken, classController.createClass);
 // 내 기관의 클래스 목록 조회 (기관용)
 router.get('/my-classes', verifyToken, classController.getClassesByInstitution);
 
+// 반 회고 조회 (confused 집계용)
+router.get('/reflections/:classId', verifyToken, classController.getClassReflections);
+
 module.exports = router;

@@ -9,34 +9,34 @@ module.exports = (sequelize) => {
     },
     userId: {
       type: DataTypes.INTEGER,
-      field: 'UserId' // 실제 DB 컬럼명
+      field: 'UserId'
     },
-    originText: {
+    EMO_reflectionText: {
       type: DataTypes.TEXT,
-      field: 'EMO_reflectionText' // 실제 DB 컬럼명
+      field: 'EMO_reflectionText'
     },
-    imageData: {
+    EMO_image: {
       type: DataTypes.TEXT('long'),
-      field: 'EMO_image' // 실제 DB 컬럼명
+      field: 'EMO_image'
     },
-    emoji: {
+    EMO_emoji: {
       type: DataTypes.STRING,
       field: 'EMO_emoji'
     },
-    spell: {
+    EMO_spell: {
       type: DataTypes.STRING,
       field: 'EMO_spell'
     },
-    // EDU 계열 필드들 추가 (DB에 존재함)
-    eduGoal: { type: DataTypes.STRING, field: 'EDU_goal' },
-    eduAchievement: { type: DataTypes.STRING, field: 'EDU_achievement' },
-    eduLearned: { type: DataTypes.TEXT, field: 'EDU_learned' },
-    eduConfused: { type: DataTypes.TEXT, field: 'EDU_confused' },
-    eduReview: { type: DataTypes.TEXT, field: 'EDU_review' },
-    eduReflectionText: { type: DataTypes.TEXT('long'), field: 'EDU_reflectionText' },
-    eduImage: { type: DataTypes.TEXT('long'), field: 'EDU_image' },
-    eduCharCount: { type: DataTypes.INTEGER, field: 'EDU_char_count', defaultValue: 0 },
-    
+    EDU_goal:           { type: DataTypes.STRING,       field: 'EDU_goal' },
+    EDU_achievement:    { type: DataTypes.STRING,       field: 'EDU_achievement' },
+    EDU_learned:        { type: DataTypes.TEXT,         field: 'EDU_learned' },
+    EDU_confused:       { type: DataTypes.TEXT,         field: 'EDU_confused' },
+    EDU_review:         { type: DataTypes.TEXT,         field: 'EDU_review' },
+    EDU_reflectionText: { type: DataTypes.TEXT('long'), field: 'EDU_reflectionText' },
+    EDU_image:          { type: DataTypes.TEXT('long'), field: 'EDU_image' },
+    EDU_char_count:     { type: DataTypes.INTEGER,      field: 'EDU_char_count', defaultValue: 0 },
+    EDU_delay_time:     { type: DataTypes.INTEGER,      field: 'EDU_delay_time', defaultValue: 0 },
+
     cumulativeDays: { type: DataTypes.INTEGER, field: 'cumulative_days', defaultValue: 0 },
     cumulativeAbsenceDays: { type: DataTypes.INTEGER, field: 'cumulative_absence_days', defaultValue: 0 },
     

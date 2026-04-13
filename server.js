@@ -15,13 +15,55 @@ const io = new Server(server, {
 
 app.set('socketio', io);
 
+// 블라블라캔디 서버 메모리 저장소 (class_id → posts[])
+const candyBoards = {};
+
 io.on('connection', (socket) => {
   socket.on('join', ({ userId, classId }) => {
     socket.join(`user_${userId}`);
     if (classId) {
       socket.join(`class_${classId}`);
       console.log(`📡 Socket: User ${userId} joined class_${classId} room.`);
+      // 접속 시 현재 게시판 데이터 전달
+      const posts = candyBoards[classId] || [];
+      socket.emit('candy_board_init', posts);
     }
+  });
+
+  // 캔디 던지기 (새 글 작성)
+  socket.on('candy_post', ({ classId, post }) => {
+    if (!classId || !post) return;
+    if (!candyBoards[classId]) candyBoards[classId] = [];
+    const newPost = {
+      id: Date.now(),
+      text: post.text,
+      avatarUrl: post.avatarUrl || null,
+      avatarIsVideo: post.avatarIsVideo || false,
+      authorLabel: post.authorLabel || 'yummy:D',
+      likes: 0,
+      likedBy: [],
+      createdAt: new Date().toISOString(),
+    };
+    candyBoards[classId].unshift(newPost);
+    // 최대 50개 유지
+    if (candyBoards[classId].length > 50) candyBoards[classId].pop();
+    io.to(`class_${classId}`).emit('candy_post_new', newPost);
+  });
+
+  // 하트 누르기
+  socket.on('candy_like', ({ classId, postId, userId }) => {
+    if (!classId || !postId || !userId) return;
+    const posts = candyBoards[classId];
+    if (!posts) return;
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    if (post.likedBy.includes(userId)) {
+      post.likedBy = post.likedBy.filter(id => id !== userId);
+    } else {
+      post.likedBy.push(userId);
+    }
+    post.likes = post.likedBy.length;
+    io.to(`class_${classId}`).emit('candy_like_update', { postId, likes: post.likes, likedBy: post.likedBy });
   });
 });
 
@@ -45,7 +87,7 @@ const startServer = async () => {
     console.log('✅ Database connected successfully.');
 
     // 모델 구조와 DB 테이블을 강제로 일치시킴 (컬럼 추가/변경 자동 처리)
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ constraints: false });
     console.log('✅ Database schema synchronized.');
 
     const adminPassword = await bcrypt.hash('admin1234', 10);
