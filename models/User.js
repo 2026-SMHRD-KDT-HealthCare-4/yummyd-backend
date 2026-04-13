@@ -27,6 +27,7 @@ module.exports = (sequelize) => {
     streak: { type: DataTypes.INTEGER, defaultValue: 0 },
     privacy_consent: { type: DataTypes.BOOLEAN, defaultValue: false },
     third_party_consent: { type: DataTypes.BOOLEAN, defaultValue: false },
+    consultation_note: { type: DataTypes.TEXT, defaultValue: null },
     createdAt: {
       type: DataTypes.DATE,
       field: 'createdAt' // DB 컬럼명에 맞춤

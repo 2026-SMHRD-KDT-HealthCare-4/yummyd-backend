@@ -56,6 +56,12 @@ exports.register = async (req, res) => {
     res.status(201).json({ success: true, message: '회원가입이 완료되었습니다.', userId: newUser.id });
   } catch (error) {
     console.error('[Registration Error]', error);
+    if (error.name === 'SequelizeUniqueConstraintError') {
+      const field = error.errors?.[0]?.path;
+      if (field === 'email') return res.status(400).json({ success: false, message: '이미 사용 중인 이메일입니다.' });
+      if (field === 'login_id') return res.status(400).json({ success: false, message: '이미 사용 중인 아이디입니다.' });
+      return res.status(400).json({ success: false, message: '이미 사용 중인 정보입니다.' });
+    }
     res.status(500).json({ success: false, message: '서버 오류로 인해 가입에 실패했습니다.' });
   }
 };
