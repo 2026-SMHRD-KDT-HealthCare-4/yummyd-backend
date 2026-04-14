@@ -40,6 +40,7 @@ io.on('connection', (socket) => {
       avatarUrl: post.avatarUrl || null,
       avatarIsVideo: post.avatarIsVideo || false,
       authorLabel: post.authorLabel || 'yummy:D',
+      authorId: post.authorId || null,
       likes: 0,
       likedBy: [],
       createdAt: new Date().toISOString(),
@@ -48,6 +49,32 @@ io.on('connection', (socket) => {
     // 최대 50개 유지
     if (candyBoards[classId].length > 50) candyBoards[classId].pop();
     io.to(`class_${classId}`).emit('candy_post_new', newPost);
+  });
+
+  // 캔디 수정
+  socket.on('candy_edit', ({ classId, postId, userId, isInstructor, newText }) => {
+    if (!classId || !postId || !userId || !newText?.trim()) return;
+    const posts = candyBoards[classId];
+    if (!posts) return;
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    // 본인 글만 수정 가능 (강사도 자신이 쓴 글만)
+    if (post.authorId !== userId) return;
+    post.text = newText.trim();
+    io.to(`class_${classId}`).emit('candy_post_edited', { postId, newText: post.text });
+  });
+
+  // 캔디 삭제
+  socket.on('candy_delete', ({ classId, postId, userId, isInstructor }) => {
+    if (!classId || !postId || !userId) return;
+    const posts = candyBoards[classId];
+    if (!posts) return;
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    // 본인 글 또는 강사/기관은 모든 글 삭제 가능
+    if (post.authorId !== userId && !isInstructor) return;
+    candyBoards[classId] = posts.filter(p => p.id !== postId);
+    io.to(`class_${classId}`).emit('candy_post_deleted', { postId });
   });
 
   // 하트 누르기
