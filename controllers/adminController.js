@@ -50,7 +50,7 @@ exports.getStats = async (req, res) => {
        FROM Analyses a
        JOIN Reflections r ON a.ReflectionId = r.id
        WHERE r.UserId IN (:studentIds)
-         AND a.ers > 1.0`,
+         AND a.dropout_prob >= 0.99`,
       { replacements: { studentIds: studentIds.length > 0 ? studentIds : [0] }, type: sequelize.QueryTypes.SELECT }
     );
     const highRiskCount = highRiskResult.count;
@@ -133,7 +133,7 @@ exports.getClassStats = async (req, res) => {
        FROM Analyses a
        JOIN Reflections r ON a.ReflectionId = r.id
        WHERE r.UserId IN (:studentIds)
-         AND a.ers > 1.0`,
+         AND a.dropout_prob >= 0.99`,
       { replacements: { studentIds: studentIds.length > 0 ? studentIds : [0] }, type: sequelize.QueryTypes.SELECT }
     );
     const highRiskCount = highRiskResult.count;
@@ -159,10 +159,10 @@ exports.getClassStudents = async (req, res) => {
 
     const students = await sequelize.query(
       `SELECT u.id, u.username, u.enroll_status,
-        (SELECT a.ers FROM Analyses a
+        (SELECT a.dropout_prob FROM Analyses a
          JOIN Reflections r ON a.ReflectionId = r.id
          WHERE r.UserId = u.id
-         ORDER BY a.createdAt DESC LIMIT 1) as latest_ers
+         ORDER BY a.createdAt DESC LIMIT 1) as latest_dropout_prob
        FROM Users u
        WHERE u.class_id = :class_id AND u.role = 'student'
        ORDER BY u.username`,
@@ -173,7 +173,7 @@ exports.getClassStudents = async (req, res) => {
       id: s.id,
       username: s.username,
       enroll_status: s.enroll_status,
-      isHighRisk: s.latest_ers !== null && parseFloat(s.latest_ers) > 1.0
+      isHighRisk: s.latest_dropout_prob !== null && parseFloat(s.latest_dropout_prob) >= 0.99
     }));
 
     res.json({ success: true, data: result });
@@ -246,6 +246,31 @@ exports.saveConsultation = async (req, res) => {
   }
 };
 
+exports.getStudentMonitoringHistory = async (req, res) => {
+  try {
+    const { user_id } = req.query;
+    if (!user_id) return res.status(400).json({ success: false, message: 'user_id가 필요합니다.' });
+
+    const rows = await sequelize.query(
+      `SELECT r.createdAt, r.EDU_delay_time, r.EDU_char_count,
+              r.cumulative_days, r.cumulative_absence_days, a.dropout_prob,
+              a.happy_prob, a.fulfill_prob, a.relief_prob, a.gratitude_prob, a.proud_prob,
+              a.sad_prob, a.anxious_prob, a.defeat_prob, a.stress_prob,
+              a.embarrassed_prob, a.bored_prob, a.exhausted_prob, a.depressed_prob
+       FROM Reflections r
+       LEFT JOIN Analyses a ON a.ReflectionId = r.id
+       WHERE r.UserId = :user_id
+       ORDER BY r.createdAt ASC
+       LIMIT 60`,
+      { replacements: { user_id }, type: sequelize.QueryTypes.SELECT }
+    );
+
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
 exports.getHighRiskStudents = async (req, res) => {
   try {
     const institution_id = await getInstitutionId(req.user);
@@ -278,12 +303,12 @@ exports.getHighRiskStudents = async (req, res) => {
       if (!seen.has(userId)) {
         seen.add(userId);
         const student = studentIds.find(s => s.id === userId);
-        const ers = parseFloat(a.ers);
+        const prob = parseFloat(a.dropout_prob);
         result.push({
           id: userId,
           name: student?.name || '-',
-          risk_score: ers,
-          status: ers > 1.0 ? '고위험' : ers > 0.5 ? '주의' : '정상'
+          risk_score: prob,
+          status: prob >= 0.99 ? '고위험' : prob >= 0.5 ? '주의' : '정상'
         });
       }
     }
