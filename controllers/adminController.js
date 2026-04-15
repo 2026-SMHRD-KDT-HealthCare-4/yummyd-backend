@@ -162,7 +162,11 @@ exports.getClassStudents = async (req, res) => {
         (SELECT a.dropout_prob FROM Analyses a
          JOIN Reflections r ON a.ReflectionId = r.id
          WHERE r.UserId = u.id
-         ORDER BY a.createdAt DESC LIMIT 1) as latest_dropout_prob
+         ORDER BY a.createdAt DESC LIMIT 1) as latest_dropout_prob,
+        (SELECT COUNT(*) FROM Analyses a
+         JOIN Reflections r ON a.ReflectionId = r.id
+         WHERE r.UserId = u.id
+         AND a.dropout_prob >= 0.99) as ever_high_risk_count
        FROM Users u
        WHERE u.class_id = :class_id AND u.role = 'student'
        ORDER BY u.username`,
@@ -173,7 +177,8 @@ exports.getClassStudents = async (req, res) => {
       id: s.id,
       username: s.username,
       enroll_status: s.enroll_status,
-      isHighRisk: s.latest_dropout_prob !== null && parseFloat(s.latest_dropout_prob) >= 0.99
+      isHighRisk: s.latest_dropout_prob !== null && parseFloat(s.latest_dropout_prob) >= 0.99,
+      isEverHighRisk: parseInt(s.ever_high_risk_count) > 0
     }));
 
     res.json({ success: true, data: result });
