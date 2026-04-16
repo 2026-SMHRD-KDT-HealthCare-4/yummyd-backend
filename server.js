@@ -84,10 +84,13 @@ io.on('connection', (socket) => {
     if (!posts) return;
     const post = posts.find(p => p.id === postId);
     if (!post) return;
-    if (post.likedBy.includes(userId)) {
-      post.likedBy = post.likedBy.filter(id => id !== userId);
+    // 타입 불일치 방지: likedBy 배열 전체와 incoming userId를 Number로 정규화
+    const uid = Number(userId);
+    post.likedBy = post.likedBy.map(Number);
+    if (post.likedBy.includes(uid)) {
+      post.likedBy = post.likedBy.filter(id => id !== uid);
     } else {
-      post.likedBy.push(userId);
+      post.likedBy.push(uid);
     }
     post.likes = post.likedBy.length;
     io.to(`class_${classId}`).emit('candy_like_update', { postId, likes: post.likes, likedBy: post.likedBy });

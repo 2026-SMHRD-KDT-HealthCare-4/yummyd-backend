@@ -257,16 +257,19 @@ exports.getStudentMonitoringHistory = async (req, res) => {
     if (!user_id) return res.status(400).json({ success: false, message: 'user_id가 필요합니다.' });
 
     const rows = await sequelize.query(
-      `SELECT r.createdAt, r.EDU_delay_time, r.EDU_char_count,
-              r.cumulative_days, r.cumulative_absence_days, a.dropout_prob,
-              a.happy_prob, a.fulfill_prob, a.relief_prob, a.gratitude_prob, a.proud_prob,
-              a.sad_prob, a.anxious_prob, a.defeat_prob, a.stress_prob,
-              a.embarrassed_prob, a.bored_prob, a.exhausted_prob, a.depressed_prob
-       FROM Reflections r
-       LEFT JOIN Analyses a ON a.ReflectionId = r.id
-       WHERE r.UserId = :user_id
-       ORDER BY r.createdAt ASC
-       LIMIT 60`,
+      `SELECT * FROM (
+         SELECT r.createdAt, r.EDU_delay_time, r.EDU_char_count,
+                r.cumulative_days, r.cumulative_absence_days, a.dropout_prob,
+                a.happy_prob, a.fulfill_prob, a.relief_prob, a.gratitude_prob, a.proud_prob,
+                a.sad_prob, a.anxious_prob, a.defeat_prob, a.stress_prob,
+                a.embarrassed_prob, a.bored_prob, a.exhausted_prob, a.depressed_prob
+         FROM Reflections r
+         LEFT JOIN Analyses a ON a.ReflectionId = r.id
+         WHERE r.UserId = :user_id
+         ORDER BY r.createdAt DESC
+         LIMIT 60
+       ) sub
+       ORDER BY sub.createdAt ASC`,
       { replacements: { user_id }, type: sequelize.QueryTypes.SELECT }
     );
 
