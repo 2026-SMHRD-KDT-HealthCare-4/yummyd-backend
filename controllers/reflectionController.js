@@ -33,6 +33,12 @@ exports.createReflection = async (req, res) => {
       order: [['createdAt', 'ASC']]
     });
 
+    // 로컬 날짜 문자열 반환 헬퍼 (toISOString은 UTC 기준이라 KST 새벽 시간대에 날짜 오차 발생)
+    const toLocalDateStr = (d) => {
+      const date = new Date(d);
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    };
+
     const cumulativeDays = allReflections.length + 1; // 현재 작성 포함
 
     let cumulativeAbsenceDays = 0;
@@ -40,13 +46,13 @@ exports.createReflection = async (req, res) => {
       const firstDate = new Date(allReflections[0].createdAt);
       firstDate.setHours(0, 0, 0, 0);
       const writtenDays = new Set(
-        allReflections.map(r => new Date(r.createdAt).toISOString().split('T')[0])
+        allReflections.map(r => toLocalDateStr(r.createdAt))
       );
-      writtenDays.add(today.toISOString().split('T')[0]); // 오늘 포함
+      writtenDays.add(toLocalDateStr(today)); // 오늘 포함
       let cursor = new Date(firstDate);
-      const todayStr = today.toISOString().split('T')[0];
-      while (cursor.toISOString().split('T')[0] <= todayStr) {
-        const dateStr = cursor.toISOString().split('T')[0];
+      const todayStr = toLocalDateStr(today);
+      while (toLocalDateStr(cursor) <= todayStr) {
+        const dateStr = toLocalDateStr(cursor);
         if (!writtenDays.has(dateStr)) cumulativeAbsenceDays++;
         cursor.setDate(cursor.getDate() + 1);
       }
